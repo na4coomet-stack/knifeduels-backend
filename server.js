@@ -35,7 +35,6 @@ function saveFile(file, data) {
   } catch (e) {}
 }
 
-// OTOMATİK ENJEKTE: Hem İsim Kesilmesini Düzeltir Hem de Bitmeyen Giveaway Popup'ını Sonsuza Kadar Siler
 const AUTO_PATCH_CODE = `
 <style id="kd-leaderboard-fix">
   .lb-row {
@@ -92,19 +91,12 @@ const AUTO_PATCH_CODE = `
 </style>
 <script id="kd-popup-cleanup-script">
   (function() {
-    // 1. Tarayıcı hafızasında takılı kalan eski kazananı derhal sil
-    try {
-      localStorage.removeItem('kd_gw_winner');
-    } catch(e) {}
-
-    // 2. Sayfa açıldığında modalı anında kapat
+    try { localStorage.removeItem('kd_gw_winner'); } catch(e) {}
     document.addEventListener('DOMContentLoaded', function() {
       localStorage.removeItem('kd_gw_winner');
       var m = document.getElementById('gwWinnerModal');
       if (m) m.style.display = 'none';
     });
-
-    // 3. Kapat butonuna basıldığında hafızayı temizle
     window.closeGwWinnerModal = function() {
       var m = document.getElementById('gwWinnerModal');
       if (m) m.style.display = 'none';
@@ -221,7 +213,6 @@ let activeTickets = loadFile(TICKETS_FILE, []);
 let usersDb = loadFile(USERS_FILE, {});
 let activeGiveaway = loadFile(GIVEAWAY_FILE, null);
 
-// BAŞLANGIÇ KONTROLÜ: Eski veya süresi dolmuş çekilişi sıfırla
 if (activeGiveaway && (Date.now() >= (activeGiveaway.endTime || 0))) {
   activeGiveaway = null;
   saveFile(GIVEAWAY_FILE, null);
@@ -468,7 +459,6 @@ function broadcast(msgObj) {
 
 setInterval(() => { broadcast({ type: 'heartbeat' }); }, 5000);
 
-// ÇEKİLİŞ SÜRESİ DOLUNCA KAZANANI BELİRLEYİP KAPATAN FONKSİYON
 function checkGiveawayExpiry() {
   if (activeGiveaway && Date.now() >= activeGiveaway.endTime) {
     const users = activeGiveaway.joinedUsers || [];
@@ -537,10 +527,12 @@ wss.on('connection', (ws) => {
         chatMessages.push(chatMsg);
         if (chatMessages.length > 50) chatMessages.shift();
         broadcast({ type: 'new_chat_message', message: chatMsg });
+
       } else if (data.type === 'create_ticket') {
         activeTickets.unshift(data.ticket);
         saveFile(TICKETS_FILE, activeTickets);
         broadcast({ type: 'ticket_created', ticket: data.ticket });
+
       } else if (data.type === 'ticket_message') {
         const target = activeTickets.find(t => t.id === data.ticketId);
         if (target) {
@@ -549,6 +541,7 @@ wss.on('connection', (ws) => {
           saveFile(TICKETS_FILE, activeTickets);
           broadcast({ type: 'new_ticket_message', ticketId: data.ticketId, message: data.message });
         }
+
       } else if (data.type === 'close_ticket') {
         const target = activeTickets.find(t => t.id === data.ticketId);
         if (target) {
@@ -556,10 +549,12 @@ wss.on('connection', (ws) => {
           saveFile(TICKETS_FILE, activeTickets);
           broadcast({ type: 'sync_tickets', tickets: activeTickets });
         }
+
       } else if (data.type === 'start_giveaway') {
         activeGiveaway = data.giveaway;
         saveFile(GIVEAWAY_FILE, activeGiveaway);
         broadcast({ type: 'sync_giveaway', giveaway: activeGiveaway });
+
       } else if (data.type === 'join_giveaway') {
         if (activeGiveaway && Date.now() < activeGiveaway.endTime) {
           const uname = String(data.username || '').toLowerCase();
@@ -569,6 +564,7 @@ wss.on('connection', (ws) => {
             broadcast({ type: 'sync_giveaway', giveaway: activeGiveaway });
           }
         }
+
       } else if (data.type === 'admin_grant_gems') {
         const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
         if (!isOwner) return;
@@ -592,6 +588,7 @@ wss.on('connection', (ws) => {
           toast: `Admin credited ${targetSecret.name} to your inventory!`,
           toastType: 'success'
         });
+
       } else if (data.type === 'admin_withdraw_gems') {
         const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
         if (!isOwner) return;
@@ -618,19 +615,40 @@ wss.on('connection', (ws) => {
           toast: `⚠️ ${removedItemName} has been withdrawn from your inventory!`,
           toastType: 'error'
         });
+
       } else if (data.type === 'create_match') {
         data.match.status = 'open';
         activeMatches.unshift(data.match);
         saveFile(MATCHES_FILE, activeMatches);
         broadcast({ type: 'match_created', match: data.match });
+
       } else if (data.type === 'cancel_match') {
+        // FIX: Maça biri join ettiyse veya rolling/finished ise cancel'ı reddet
+        const matchToCancel = activeMatches.find(m => m.id === data.matchId);
+        if (matchToCancel && (matchToCancel.opponent || matchToCancel.status === 'rolling' || matchToCancel.status === 'finished')) {
+          // Cancel reddedildi — client'a güncel maç bilgisini gönder ki UI sync olsun
+          ws.send(JSON.stringify({
+            type: 'cancel_rejected',
+            matchId: data.matchId,
+            match: matchToCancel
+          }));
+          return;
+        }
         activeMatches = activeMatches.filter(m => m.id !== data.matchId);
         saveFile(MATCHES_FILE, activeMatches);
         broadcast({ type: 'match_cancelled', matchId: data.matchId });
+
       } else if (data.type === 'join_match') {
         const matchIdx = activeMatches.findIndex(m => m.id === data.matchId);
         if (matchIdx !== -1) {
           const match = activeMatches[matchIdx];
+
+          // FIX: Maç zaten rolling/finished ise tekrar join ettirme
+          if (match.status === 'rolling' || match.status === 'finished' || match.opponent) {
+            ws.send(JSON.stringify({ type: 'join_rejected', matchId: data.matchId }));
+            return;
+          }
+
           const winnerSide = Math.random() < 0.5 ? 'K' : 'D';
           const isCreatorWinner = winnerSide === match.side;
           const winnerName = isCreatorWinner ? match.creatorName : data.opponent.name;
@@ -642,7 +660,9 @@ wss.on('connection', (ws) => {
           match.winnerName = winnerName;
           saveFile(MATCHES_FILE, activeMatches);
 
-          broadcast({ type: 'duel_started', match: match });
+          // Tüm client'lara duel_started gönder — status: 'rolling' garantili
+          // Bu sayede creator'ın userSaved'ı güncellenir, Cancel butonu kaybolur
+          broadcast({ type: 'duel_started', match: { ...match, status: 'rolling' } });
 
           setTimeout(() => {
             match.status = 'finished';
@@ -675,4 +695,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`KnifeDuels running on http://localhost:${PORT}`);
 });
-
