@@ -1,0 +1,2613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KnifeDuels - Secret Brainrot Edition</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #05070a; color: #ffffff; min-height: 100vh; padding-bottom: 50px; overflow-x: hidden; pointer-events: auto !important; }
+
+    header { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background-color: #0b0e14; border-bottom: 1.5px solid #1c222e; position: sticky; top: 0; z-index: 50; }
+    .kd-brand-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+    .kd-logo-kd { width: 44px; height: 44px; background: linear-gradient(135deg, #18202c 0%, #06080c 100%); border: 2px solid #ffffff; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 900; font-style: italic; color: #ffffff; box-shadow: 0 0 15px rgba(255,255,255,0.25); letter-spacing: -1px; }
+    .kd-logo-kd span { color: #888; }
+    .kd-brand-text { display: flex; flex-direction: column; line-height: 1; }
+    .kd-brand-title { font-size: 1.2rem; font-weight: 900; font-style: italic; color: #ffffff; letter-spacing: -0.5px; }
+    .kd-brand-sub { font-size: 0.62rem; font-weight: 800; color: #8b9bb4; letter-spacing: 1.5px; }
+
+    .header-right { display: flex; align-items: center; gap: 10px; z-index: 60; }
+    .btn-header-mono { background-color: #ffffff; border: 1px solid #ffffff; border-radius: 8px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000000; box-shadow: 0 2px 10px rgba(255,255,255,0.15); position: relative; }
+    .btn-header-mono svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2.2; pointer-events: none; }
+
+    /* HAMBURGER BADGE */
+    .menu-notif-badge { position: absolute; top: -6px; right: -6px; background-color: #ef4444; color: #ffffff; font-size: 0.6rem; font-weight: 900; border-radius: 10px; min-width: 18px; height: 18px; display: none; align-items: center; justify-content: center; border: 2px solid #0b0e14; z-index: 10; padding: 0 3px; pointer-events: none; line-height: 1; }
+    .menu-notif-badge.show { display: flex; }
+
+    .avatar-wrapper { position: relative; }
+    .nav-avatar-btn { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #ffffff; overflow: hidden; cursor: pointer; background-color: #1a2230; box-shadow: 0 0 10px rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; position: relative; }
+    .nav-avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
+    .header-badge-notify { position: absolute; top: -2px; right: -2px; background-color: #ef4444; color: #ffffff; font-size: 0.65rem; font-weight: 900; border-radius: 50%; width: 18px; height: 18px; display: none; align-items: center; justify-content: center; border: 1.5px solid #0b0e14; z-index: 10; pointer-events: none; }
+
+    .profile-dropdown { display: none; position: absolute; right: 0; top: 48px; background-color: #0f141d; border: 1.5px solid #222d3d; border-radius: 12px; width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); z-index: 1000; overflow: hidden; }
+    .profile-dropdown.active { display: block; }
+    .dropdown-user-info { padding: 10px 14px; border-bottom: 1px solid #1e2634; font-size: 0.82rem; font-weight: 800; color: #cbd5e1; }
+    .dropdown-btn { width: 100%; padding: 12px 14px; text-align: left; background: none; border: none; color: #38bdf8; font-size: 0.85rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #1e2634; }
+    .dropdown-btn.logout { color: #ef4444; border-top: 1px solid #1e2634; }
+    .btn-login-nav { background-color: #ffffff; color: #000000; font-weight: 900; padding: 9px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; }
+
+    /* TOAST */
+    .site-toast { position: fixed; top: -70px; left: 50%; transform: translateX(-50%); background: #0f172a; border: 1.5px solid #334155; padding: 12px 20px; border-radius: 12px; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 800; color: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.9); z-index: 999999; transition: top 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); white-space: nowrap; pointer-events: none; }
+    .site-toast.show { top: 20px; }
+    .site-toast.success { border-color: #22c55e; }
+    .site-toast.error { border-color: #ef4444; }
+    .site-toast.info { border-color: #38bdf8; }
+
+    /* SIDE MENU */
+    .side-nav-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 99998; pointer-events: auto; }
+    .side-nav-wrapper { position: fixed; top: 0; left: -100%; width: 90%; max-width: 375px; height: 100%; background-color: #0b0e14; display: flex; z-index: 99999; transition: left 0.3s ease; box-shadow: 10px 0 35px rgba(0,0,0,0.95); pointer-events: auto; }
+    .side-nav-wrapper.open { left: 0; }
+    .side-icons-col { width: 84px; background-color: #07090d; border-right: 1px solid #181d26; display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 16px; }
+    .side-icon-item { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; color: #64748b; font-size: 0.62rem; font-weight: 800; text-align: center; position: relative; }
+    .side-icon-item.active { color: #ffffff; }
+    .side-icon-box { width: 44px; height: 44px; border-radius: 12px; background-color: #12161f; border: 1px solid #232a38; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; }
+    .ticket-badge-pill { position: absolute; top: -4px; right: -8px; background-color: #facc15; color: #000000; font-size: 0.58rem; font-weight: 900; border-radius: 6px; padding: 2px 5px; box-shadow: 0 0 10px rgba(250,204,21,0.6); }
+
+    /* SIDE ICON NOTIFICATION BADGE (for tickets tab) */
+    .side-icon-notif { position: absolute; top: -4px; right: -6px; background-color: #ef4444; color: #fff; font-size: 0.58rem; font-weight: 900; border-radius: 10px; min-width: 16px; height: 16px; display: none; align-items: center; justify-content: center; border: 1.5px solid #07090d; padding: 0 3px; pointer-events: none; }
+    .side-icon-notif.show { display: flex; }
+
+    .side-chat-col { flex: 1; display: flex; flex-direction: column; background-color: #0e121a; overflow: hidden; }
+    .chat-top-header { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1c2331; flex-shrink: 0; }
+    .online-tag { display: flex; align-items: center; gap: 7px; font-size: 0.85rem; font-weight: 800; color: #ffffff; }
+    .online-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #22c55e; box-shadow: 0 0 10px #22c55e; }
+    .btn-close-chat { background: #181f2c; border: none; color: #94a3b8; border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .chat-messages-container { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; }
+    .chat-item { display: flex; align-items: flex-start; gap: 10px; }
+    .chat-avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: #1a2230; border: 1px solid #334155; flex-shrink: 0; }
+    .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .chat-bubble { display: flex; flex-direction: column; gap: 3px; max-width: 80%; background: #141a24; padding: 8px 12px; border-radius: 10px; border: 1px solid #1e2736; }
+    .chat-text { font-size: 0.85rem; color: #f8fafc; word-break: break-word; line-height: 1.4; }
+    .chat-input-bar { padding: 10px 12px; border-top: 1px solid #1c2331; display: flex; align-items: center; gap: 8px; background-color: #0a0d13; flex-shrink: 0; }
+    .chat-input { flex: 1; background-color: #06080c; border: 1px solid #202736; border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 0.85rem; outline: none; }
+    .btn-send-chat { background-color: #ffffff; border: none; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: #000000; cursor: pointer; flex-shrink: 0; }
+
+    /* TICKET TRANSACTIONS PANEL (inside side nav) */
+    .ticket-transactions-panel { flex: 1; display: none; flex-direction: column; background-color: #0e121a; overflow: hidden; }
+    .ticket-transactions-panel.active { display: flex; }
+    .tt-header { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1c2331; flex-shrink: 0; }
+    .tt-header-title { font-size: 0.9rem; font-weight: 900; color: #ffffff; }
+    .tt-list { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .tt-empty { text-align: center; color: #64748b; font-size: 0.82rem; padding: 30px 0; }
+    .tt-card { background: #141a24; border: 1.5px solid #1e2634; border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: border-color 0.2s; }
+    .tt-card:hover { border-color: #334155; }
+    .tt-card.has-unread { border-color: #ef4444; }
+    .tt-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .tt-card-id { font-size: 0.75rem; font-weight: 900; color: #38bdf8; }
+    .tt-card-status { font-size: 0.68rem; font-weight: 900; padding: 2px 7px; border-radius: 5px; }
+    .tt-card-status.pending { background: #422006; color: #fb923c; }
+    .tt-card-status.verified { background: #052e16; color: #22c55e; }
+    .tt-card-status.closed { background: #1e1e1e; color: #94a3b8; }
+    .tt-card-user { font-size: 0.8rem; font-weight: 800; color: #ffffff; }
+    .tt-card-brainrot { font-size: 0.75rem; color: #facc15; font-weight: 700; margin-top: 2px; }
+    .tt-card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+    .tt-card-type { font-size: 0.68rem; font-weight: 800; color: #64748b; }
+    .tt-type-badge { font-size: 0.62rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px; }
+    .tt-type-deposit { background: #0f2d1a; color: #22c55e; }
+    .tt-type-withdraw { background: #2d2600; color: #facc15; }
+    .tt-card-unread { background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 900; border-radius: 8px; padding: 1px 6px; display: none; }
+    .tt-card-unread.show { display: inline-flex; }
+    .tt-card-time { font-size: 0.68rem; color: #475569; }
+
+    /* GIVEAWAY BANNER */
+    .active-giveaway-banner { background: linear-gradient(135deg, #0f172a 0%, #162032 100%); border: 1.5px solid #222d3d; border-radius: 14px; padding: 14px 18px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
+    .gw-left-content { display: flex; align-items: center; gap: 14px; }
+    .gw-item-icon { width: 50px; height: 50px; background: #0a0e14; border: 1.5px solid #2a3447; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .gw-item-icon img { width: 100%; height: 100%; object-fit: contain; }
+    .gw-info { display: flex; flex-direction: column; gap: 3px; }
+    .gw-title { font-size: 1.05rem; font-weight: 900; color: #ffffff; font-style: italic; }
+    .gw-details-row { display: flex; flex-direction: column; gap: 3px; font-size: 0.8rem; font-weight: 800; }
+    .gw-val { color: #facc15; }
+    .gw-joined-time-wrap { display: flex; flex-direction: column; gap: 2px; }
+    .gw-joined { color: #ffffff; }
+    .gw-time-black { display: inline-block; background: #000000; color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-family: monospace; border: 1px solid #222d3d; width: fit-content; }
+    .btn-gw-join { background-color: #ffffff; color: #000000; font-weight: 900; border: none; border-radius: 10px; padding: 11px 22px; font-size: 0.9rem; cursor: pointer; box-shadow: 0 2px 12px rgba(255,255,255,0.25); }
+    .btn-gw-join.joined { background-color: #1e293b; color: #94a3b8; box-shadow: none; cursor: default; }
+
+    /* MAIN CONTAINER */
+    .main-container { max-width: 440px; margin: 0 auto; padding: 16px 12px; pointer-events: auto; }
+    .controls-panel { background-color: #0f141d; border: 1.5px solid #1e2634; border-radius: 14px; padding: 14px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+    .btn-create-match { background-color: #ffffff; color: #000000; font-weight: 900; border: none; border-radius: 10px; padding: 12px; font-size: 0.9rem; cursor: pointer; }
+    .profit-box { text-align: center; display: flex; flex-direction: column; justify-content: center; }
+    .profit-box .title { font-size: 0.85rem; font-weight: 700; color: #94a3b8; }
+    .profit-box .profit-num { font-size: 1.25rem; font-weight: 900; color: #ffffff; margin-top: 2px; }
+    
+    .ratio-bar { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; font-weight: 800; }
+    .chip { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+    .chip-black { background: radial-gradient(circle, #222 0%, #000 100%); border: 2.5px solid #ffffff; color: #ffffff; text-shadow: 0 0 5px rgba(255,255,255,0.8); }
+    .chip-white { background: radial-gradient(circle, #ffffff 0%, #d1d5db 100%); border: 2.5px solid #000000; color: #000000; }
+    .btn-toggle-matches { background-color: #1a2230; color: #ffffff; border: 1px solid #334155; font-weight: 800; border-radius: 8px; padding: 8px; font-size: 0.8rem; cursor: pointer; }
+
+    .matches-list { display: flex; flex-direction: column; gap: 12px; }
+    .empty-state { background-color: #0f141d; border: 1px dashed #202838; border-radius: 12px; padding: 34px 16px; text-align: center; color: #64748b; font-size: 0.85rem; }
+
+    .blox-duel-card { background: linear-gradient(135deg, #0f141d 0%, #131b26 100%); border: 1.5px solid #1e2634; border-radius: 16px; padding: 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .blox-duel-card.is-finished { border-color: #334155; }
+    .card-players-col { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .card-player-row { display: flex; flex-direction: column; gap: 2px; }
+    .card-player-info { display: flex; align-items: center; gap: 8px; }
+    .card-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; background: #1a2230; border: 1.5px solid #334155; flex-shrink: 0; }
+    .card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .card-player-name { font-size: 0.88rem; font-weight: 800; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+    
+    .card-items-preview { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 36px; }
+    .match-gem-tag { display: inline-flex; align-items: center; gap: 6px; background: #141c2a; border: 1px solid #253347; border-radius: 6px; padding: 3px 8px; font-size: 0.75rem; font-weight: 900; color: #38bdf8; }
+    .match-gem-tag img { width: 22px; height: 22px; object-fit: contain; }
+
+    .card-val-row { font-size: 0.78rem; font-weight: 800; color: #94a3b8; padding-left: 36px; margin-bottom: 4px; }
+    .card-val-row span { color: #ffffff; }
+
+    .card-action-col { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 90px; }
+    .btn-card-join { background-color: #ffffff; color: #000000; font-weight: 900; border: none; border-radius: 10px; padding: 10px 14px; font-size: 0.82rem; cursor: pointer; text-align: center; }
+    .btn-card-cancel { background-color: #ef4444; color: #fff; font-weight: 800; border: none; border-radius: 8px; padding: 8px 10px; font-size: 0.75rem; cursor: pointer; width: 100%; margin-bottom: 6px; }
+    .btn-card-bot { background-color: #1e2634; color: #fff; font-weight: 800; border: 1px solid #334155; border-radius: 8px; padding: 8px 10px; font-size: 0.75rem; cursor: pointer; width: 100%; }
+
+    /* INVENTORY */
+    .sub-view { display: none; }
+    .inventory-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .inventory-title { font-size: 1.35rem; font-weight: 900; font-style: italic; color: #ffffff; }
+    .btn-blox-deposit { background-color: #ffffff; color: #000000; font-weight: 900; border: none; border-radius: 8px; padding: 8px 18px; font-size: 0.95rem; cursor: pointer; }
+
+    .search-bar-input { width: 100%; background: #0c1017; border: 1.5px solid #222d3d; border-radius: 10px; padding: 12px 14px; color: #fff; font-size: 0.9rem; margin-bottom: 14px; outline: none; }
+    .inventory-list-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; contain: content; }
+    .inv-row-item { background-color: #0f141d; border: 1.5px solid #1e2634; border-radius: 14px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .inv-row-left { display: flex; align-items: center; gap: 14px; }
+    
+    .inv-row-icon { width: 56px; height: 56px; background: #141b26; border: 1.5px solid #2a3547; border-radius: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .inv-row-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+    .inv-row-info { display: flex; flex-direction: column; gap: 2px; }
+    .inv-row-name { font-size: 0.95rem; font-weight: 900; color: #ffffff; font-style: italic; }
+    .inv-row-val { font-size: 0.78rem; font-weight: 800; color: #facc15; }
+
+    .inv-row-actions { display: flex; gap: 8px; }
+    .btn-row-withdraw { background-color: #ffffff; color: #000000; font-weight: 800; border: none; border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; cursor: pointer; }
+    .btn-row-giveaway { background-color: #1e293b; color: #ffffff; font-weight: 800; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; cursor: pointer; }
+    .btn-load-more { width: 100%; background: #141a24; border: 1.5px solid #222d3d; color: #fff; padding: 12px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; margin-bottom: 20px; }
+
+    /* MODALS */
+    .custom-popup-overlay, .modal-overlay, .blox-auth-overlay, .bloxluck-arena-overlay, .result-popup-overlay, .ticket-log-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); justify-content: center; align-items: center; z-index: 999999; padding: 20px; pointer-events: auto;
+    }
+    .custom-popup-card, .modal-card, .arena-main-card, .result-popup-card, .ticket-log-card {
+      background: #0f141d; border: 1.5px solid #222d3d; border-radius: 20px; width: 100%; max-width: 400px; padding: 24px; position: relative; max-height: 90vh; overflow-y: auto; pointer-events: auto; z-index: 1000000;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .btn-close { background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 1.1rem; }
+
+    .blox-input, .chat-input { width: 100%; background-color: #06090e; border: 1.5px solid #ffffff; border-radius: 12px; padding: 14px 16px; color: #ffffff; font-size: 0.95rem; font-weight: 600; outline: none; margin-bottom: 16px; }
+    .blox-btn-row { display: grid; grid-template-columns: 1fr 1.35fr; gap: 12px; }
+    .blox-btn-cancel { background-color: #18202c; border: none; color: #cbd5e1; padding: 14px 0; border-radius: 12px; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+    .blox-btn-primary { background-color: #ffffff; border: none; color: #000000; padding: 14px 0; border-radius: 12px; font-weight: 900; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+    /* MONOCHROME AUTH CARD */
+    .blox-auth-card { background: #0a0d14; border: 1.5px solid #ffffff; border-radius: 22px; width: 100%; max-width: 360px; padding: 24px 20px; position: relative; box-shadow: 0 0 35px rgba(255,255,255,0.15); pointer-events: auto; }
+    .auth-title-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .auth-title-bar h3 { font-size: 1.2rem; font-weight: 900; color: #ffffff; margin: 0 auto; letter-spacing: -0.5px; }
+    .auth-input-mono { width: 100%; background-color: #000000; border: 2px solid #ffffff; border-radius: 12px; padding: 14px 16px; color: #ffffff; font-size: 1rem; font-weight: 800; outline: none; margin-bottom: 14px; text-align: left; }
+    
+    .sec-words-head { font-size: 0.98rem; font-weight: 900; color: #ffffff; text-align: center; margin-bottom: 6px; }
+    .sec-words-desc { font-size: 0.82rem; color: #cbd5e1; text-align: center; line-height: 1.35; margin-bottom: 14px; padding: 0 4px; }
+    
+    .rbx-mock-card { background: #ffffff; border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; color: #000000; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .rbx-mock-user { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .rbx-mock-avatar { width: 36px; height: 36px; border-radius: 50%; background: #111; overflow: hidden; }
+    .rbx-mock-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .rbx-mock-name { font-size: 0.88rem; font-weight: 900; line-height: 1.1; }
+    .rbx-mock-tag { font-size: 0.72rem; font-weight: 700; color: #64748b; }
+    .rbx-mock-tabs { display: flex; gap: 14px; font-size: 0.78rem; font-weight: 800; color: #94a3b8; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px; }
+    .rbx-mock-tabs .tab-active { color: #000000; border-bottom: 2px solid #000000; padding-bottom: 4px; }
+    .rbx-mock-about-title { font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; gap: 4px; color: #334155; }
+    .rbx-mock-phrase-box { position: relative; padding-top: 4px; }
+    .rbx-mock-phrase-text { font-size: 0.82rem; font-weight: 700; color: #1e293b; font-family: monospace; word-break: break-word; }
+    .rbx-mock-arrow { position: absolute; right: 8px; top: -14px; width: 34px; height: 24px; pointer-events: none; }
+
+    .sec-phrase-display { background: #141b27; border: 1px solid #334155; border-radius: 12px; padding: 12px 14px; color: #ffffff; font-size: 0.86rem; font-weight: 800; text-align: center; margin-bottom: 10px; word-break: break-word; }
+    .btn-copy-all { width: 100%; background-color: #ffffff; color: #000000; font-weight: 900; border: none; border-radius: 12px; padding: 13px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px; box-shadow: 0 4px 15px rgba(255,255,255,0.2); }
+    .btn-auth-login { background-color: #ffffff; color: #000000; font-weight: 900; border: none; border-radius: 12px; padding: 13px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .btn-auth-cancel { background-color: #1a2230; color: #ffffff; font-weight: 800; border: 1px solid #334155; border-radius: 12px; padding: 13px; font-size: 0.95rem; cursor: pointer; }
+
+    .btn-spinner { width: 16px; height: 16px; border: 2px solid #000; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* COIN SELECTION */
+    .side-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+    .side-card { background-color: #070a0f; border: 2px solid #1e2634; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; font-weight: 800; font-size: 0.9rem; }
+    .side-card.active { border-color: #ffffff; background-color: #171f2b; }
+    .coin-preview-large { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: 900; }
+    .coin-large-k { background: radial-gradient(circle, #222 0%, #000 100%); border: 3px solid #ffffff; color: #ffffff; box-shadow: 0 0 15px rgba(255,255,255,0.4); text-shadow: 0 0 8px #ffffff; }
+    .coin-large-d { background: radial-gradient(circle, #ffffff 0%, #d1d5db 100%); border: 3px solid #000000; color: #000000; box-shadow: 0 0 15px rgba(255,255,255,0.4); }
+
+    .modal-items-grid { display: grid; grid-template-columns: 1fr; gap: 8px; max-height: 240px; overflow-y: auto; margin-bottom: 14px; padding: 4px; }
+    .modal-item-row-card { background-color: #0a0d13; border: 1.5px solid #1e2634; border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+    .modal-item-row-card.is-selected { border-color: #ffffff !important; background-color: #171f2c !important; }
+    .modal-item-row-left { display: flex; align-items: center; gap: 12px; }
+    .modal-item-row-icon { width: 44px; height: 44px; background: #12161f; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .modal-item-row-icon img { width: 100%; height: 100%; object-fit: contain; }
+    .modal-item-row-name { font-size: 0.95rem; font-weight: 900; color: #fff; font-style: italic; }
+
+    /* 3D ARENA OVERLAY */
+    .bloxluck-arena-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 7, 10, 0.96); backdrop-filter: blur(14px); justify-content: center; align-items: center; z-index: 1000000 !important; padding: 16px; }
+    .arena-duelists { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px; }
+    .duelist-box { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 110px; padding: 12px 8px; border-radius: 14px; background-color: #07090e; border: 2px solid #1e2634; transition: all 0.35s ease; }
+    .duelist-box.winner { border-color: #ffffff !important; box-shadow: 0 0 25px rgba(255,255,255,0.4); background-color: #171f2c; }
+    .duelist-box.loser { opacity: 0.35; border-color: #ef4444 !important; }
+    .duelist-avatar { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; border: 2px solid #ffffff; background-color: #1a2230; }
+    .duelist-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .duelist-name { font-size: 0.85rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95px; }
+    .duelist-val { font-size: 0.78rem; font-weight: 800; color: #ffffff; }
+    .arena-vs { font-size: 1.2rem; font-weight: 900; font-style: italic; color: #64748b; }
+
+    .coin-stage { width: 140px; height: 140px; perspective: 1000px; margin: 15px auto 25px; position: relative; }
+    .flipper-coin { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; border-radius: 50%; }
+    .coin-face { position: absolute; width: 100%; height: 100%; border-radius: 50%; backface-visibility: hidden; display: flex; align-items: center; justify-content: center; }
+    .face-k { transform: rotateY(0deg); background: radial-gradient(circle, #222 0%, #000 100%); border: 6px solid #ffffff; color: #ffffff; box-shadow: 0 0 25px rgba(255,255,255,0.5); }
+    .face-d { transform: rotateY(180deg); background: radial-gradient(circle, #ffffff 0%, #d1d5db 100%); border: 6px solid #000000; color: #000000; }
+    .chip-badge { font-size: 2.5rem; font-weight: 900; }
+
+    .spin-k { animation: spinToK 4s cubic-bezier(0.15, 0.85, 0.25, 1) forwards; }
+    .spin-d { animation: spinToD 4s cubic-bezier(0.15, 0.85, 0.25, 1) forwards; }
+    @keyframes spinToK { 0% { transform: rotateY(0deg) scale(0.9); } 50% { transform: rotateY(1080deg) scale(1.15); } 100% { transform: rotateY(2160deg) scale(1); } }
+    @keyframes spinToD { 0% { transform: rotateY(0deg) scale(0.9); } 50% { transform: rotateY(1080deg) scale(1.15); } 100% { transform: rotateY(2340deg) scale(1); } }
+
+    .result-popup-card { background: linear-gradient(135deg, #0f172a 0%, #0b0f19 100%); border: 2px solid #ffffff; border-radius: 24px; width: 100%; max-width: 350px; padding: 30px 20px; text-align: center; }
+    .result-popup-card.loss-card { border-color: #ef4444; }
+    .result-popup-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 6px; }
+    .result-popup-desc { font-size: 0.85rem; color: #94a3b8; margin-bottom: 16px; }
+    .result-popup-val { font-size: 1.5rem; font-weight: 900; margin-bottom: 24px; }
+
+    /* VERME SİSTEMİ */
+    .verme-header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .verme-title { font-size:1.2rem; font-weight:900; font-style:italic; color:#a855f7; display:flex; align-items:center; gap:8px; }
+    .verme-search-bar { display:flex; gap:8px; margin-bottom:16px; }
+    .verme-search-input { flex:1; background:#0c1017; border:1.5px solid #7c3aed; border-radius:10px; padding:12px 14px; color:#fff; font-size:0.9rem; outline:none; }
+    .verme-search-btn { background:#7c3aed; color:#fff; font-weight:900; border:none; border-radius:10px; padding:12px 18px; cursor:pointer; font-size:0.85rem; }
+    .verme-panels { display:flex; flex-direction:column; gap:14px; }
+    .verme-panel { background:#0f141d; border:1.5px solid #1e2634; border-radius:14px; padding:14px; }
+    .verme-panel-title { font-size:0.85rem; font-weight:900; color:#94a3b8; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+    .verme-panel-title span { font-weight:700; color:#64748b; }
+    .verme-item { display:flex; align-items:center; gap:10px; padding:9px 10px; background:#141a24; border:1.5px solid #1e2634; border-radius:10px; }
+    .verme-item-icon { width:44px; height:44px; background:#0a0e14; border-radius:8px; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .verme-item-icon img { width:100%; height:100%; object-fit:contain; }
+    .verme-item-info { flex:1; min-width:0; }
+    .verme-item-name { font-size:0.85rem; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .verme-item-val { font-size:0.72rem; font-weight:800; color:#facc15; margin-top:1px; }
+    .btn-ver { background:#a855f7; color:#fff; font-weight:900; border:none; border-radius:8px; padding:7px 13px; font-size:0.78rem; cursor:pointer; flex-shrink:0; }
+    .btn-al { background:#f59e0b; color:#000; font-weight:900; border:none; border-radius:8px; padding:7px 13px; font-size:0.78rem; cursor:pointer; flex-shrink:0; }
+    .verme-empty { text-align:center; color:#475569; font-size:0.82rem; padding:20px 0; }
+    .verme-user-info-bar { display:flex; align-items:center; gap:10px; background:#141a24; border:1.5px solid #7c3aed; border-radius:10px; padding:10px 12px; margin-bottom:12px; }
+    .verme-user-avatar { width:38px; height:38px; border-radius:50%; overflow:hidden; background:#1a2230; border:2px solid #7c3aed; flex-shrink:0; }
+    .verme-user-avatar img { width:100%; height:100%; object-fit:cover; }
+    .verme-user-name { font-size:0.9rem; font-weight:900; color:#fff; }
+    .verme-user-count { font-size:0.75rem; font-weight:700; color:#a855f7; }
+    .verme-items-list { display:flex; flex-direction:column; gap:7px; max-height:260px; overflow-y:auto; padding-right:2px; }
+    .verme-tab-bar { display:flex; gap:8px; margin-bottom:12px; }
+    .verme-tab { flex:1; padding:9px; background:#141a24; border:1.5px solid #1e2634; border-radius:8px; font-size:0.8rem; font-weight:900; color:#64748b; cursor:pointer; text-align:center; transition:all 0.15s; }
+    .verme-tab.active { background:#1e0a3c; border-color:#7c3aed; color:#a855f7; }
+    .verme-loading { text-align:center; padding:30px 0; color:#64748b; font-size:0.85rem; }
+
+    /* LEADERBOARD */
+    .lb-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); backdrop-filter: blur(10px); justify-content: center; align-items: flex-end; z-index: 999999; padding: 0; }
+    .lb-sheet { background: #0a0d14; border: 1.5px solid #1c2331; border-radius: 22px 22px 0 0; width: 100%; max-width: 480px; margin: 0 auto; padding: 0 0 40px 0; max-height: 88vh; overflow-y: auto; position: relative; box-shadow: 0 -10px 40px rgba(0,0,0,0.95); }
+    .lb-handle { width: 40px; height: 4px; background: #2a3447; border-radius: 2px; margin: 14px auto 0; }
+    .lb-header { padding: 16px 20px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #141d2a; }
+    .lb-title { font-size: 1.1rem; font-weight: 900; font-style: italic; color: #ffffff; display: flex; align-items: center; gap: 8px; }
+    .lb-tabs { display: flex; gap: 6px; padding: 12px 16px 0; }
+    .lb-tab { flex: 1; padding: 8px; background: #0f141d; border: 1.5px solid #1e2634; border-radius: 8px; font-size: 0.78rem; font-weight: 900; color: #64748b; cursor: pointer; text-align: center; transition: all 0.15s; }
+    .lb-tab.active { background: #111827; border-color: #ffffff; color: #ffffff; }
+    .lb-list { padding: 10px 14px; display: flex; flex-direction: column; gap: 7px; }
+    .lb-row { display: flex; align-items: center; gap: 12px; background: #0f141d; border: 1.5px solid #1e2634; border-radius: 12px; padding: 11px 14px; position: relative; transition: border-color 0.15s; }
+    .lb-row:hover { border-color: #2a3550; }
+    .lb-row.top1 { border-color: #facc15; background: linear-gradient(135deg, #0f141d 0%, #1a1500 100%); }
+    .lb-row.top2 { border-color: #94a3b8; }
+    .lb-row.top3 { border-color: #c2774a; }
+    .lb-rank { font-size: 0.85rem; font-weight: 900; color: #64748b; width: 22px; text-align: center; flex-shrink: 0; }
+    .lb-rank.r1 { color: #facc15; font-size: 1.1rem; }
+    .lb-rank.r2 { color: #94a3b8; }
+    .lb-rank.r3 { color: #c2774a; }
+    .lb-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: #1a2230; border: 2px solid #334155; flex-shrink: 0; }
+    .lb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .lb-name { flex: 1; font-size: 0.9rem; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lb-val { font-size: 0.82rem; font-weight: 900; color: #facc15; text-align: right; flex-shrink: 0; }
+    .lb-empty { text-align: center; color: #475569; font-size: 0.85rem; padding: 30px 0; }
+    .lb-loading { display: flex; align-items: center; justify-content: center; padding: 30px 0; gap: 10px; color: #64748b; font-size: 0.85rem; font-weight: 800; }
+
+    /* FOOTER */
+    .kd-footer { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); background: #070a0f; border-top: 1.5px solid #131b26; border-left: 1.5px solid #131b26; border-right: 1.5px solid #131b26; border-radius: 14px 14px 0 0; padding: 10px 12px; display: flex; gap: 8px; align-items: center; z-index: 90; width: 100%; max-width: 480px; }
+    .kd-footer-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; background: #0f141d; border: 1.5px solid #1e2634; border-radius: 10px; padding: 9px 6px; cursor: pointer; color: #64748b; font-size: 0.62rem; font-weight: 900; text-align: center; transition: all 0.15s; }
+    .kd-footer-btn:hover, .kd-footer-btn.active { border-color: #ffffff; color: #ffffff; background: #131c29; }
+    .kd-footer-btn svg { width: 20px; height: 20px; }
+    .kd-footer-discord { background: #0f141d; border: 1.5px solid #5865F2; border-radius: 10px; padding: 9px 14px; cursor: pointer; color: #5865F2; font-size: 0.75rem; font-weight: 900; display: flex; align-items: center; gap: 6px; text-decoration: none; flex-shrink: 0; transition: all 0.15s; }
+    .kd-footer-discord:hover { background: #1a1f3a; color: #7c87f5; }
+    .kd-footer-discord svg { width: 18px; height: 18px; fill: currentColor; }
+
+    /* TICKET CHATS */
+    .ticket-chat-box { height: 260px; overflow-y: auto; background: #070a0f; border: 1.5px solid #1c2331; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+    .ticket-bubble { max-width: 88%; padding: 10px 14px; border-radius: 12px; font-size: 0.85rem; line-height: 1.45; word-break: break-word; }
+    .ticket-bubble.user { align-self: flex-end; background: #1e3a5f; color: #ffffff; border: 1px solid #2563eb; }
+    .ticket-bubble.admin { align-self: flex-start; background: #000000; color: #ffffff; border: 1.5px solid #334155; }
+    .ticket-bubble.system { align-self: stretch; background: #450a0a; color: #f87171; border: 1.5px solid #991b1b; font-size: 0.82rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <div id="siteToast" class="site-toast">
+    <span id="toastIcon">⚠️</span>
+    <span id="toastMsg">Notification</span>
+  </div>
+
+  <header>
+    <div class="kd-brand-logo" onclick="openCoinflipView()">
+      <div class="kd-logo-kd">K<span>D</span></div>
+      <div class="kd-brand-text">
+        <span class="kd-brand-title">KNIFE DUELS</span>
+        <span class="kd-brand-sub">#1 SAB GAMBLE</span>
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <!-- HAMBURGER - badge eklendi -->
+      <button class="btn-header-mono" onclick="toggleSideNav()" title="Menu & Chat">
+        <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+        <div class="menu-notif-badge" id="menuNotifBadge">0</div>
+      </button>
+      <button class="btn-header-mono" onclick="openInventoryView()" title="Inventory">
+        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+      </button>
+      <div id="auth-container">
+        <button class="btn-login-nav" onclick="openAuthModal()">Log In</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDE MENU -->
+  <div class="side-nav-overlay" id="sideNavOverlay" onclick="closeSideNav()"></div>
+  <div class="side-nav-wrapper" id="sideNavWrapper">
+    <div class="side-icons-col">
+      <div class="side-icon-item active" id="sideTabChat" onclick="switchSideTab('chat')">
+        <div class="side-icon-box">💬</div>
+        <span>CHAT</span>
+      </div>
+      <div class="side-icon-item" id="sideTabCoinflip" onclick="openCoinflipView(); closeSideNav();">
+        <div class="side-icon-box">🪙</div>
+        <span>COINFLIP</span>
+      </div>
+      <!-- TICKET TRANSACTIONS TAB -->
+      <div class="side-icon-item" id="sideTabTickets" onclick="switchSideTab('tickets')">
+        <div class="side-icon-box">🎫</div>
+        <span>TICKETS</span>
+        <div class="side-icon-notif" id="ticketTabBadge">0</div>
+      </div>
+      
+      <div class="side-icon-item" id="navDepositTicketBtn" style="display:none;" onclick="openUserTicketView(); closeSideNav();">
+        <div class="side-icon-box">📨</div>
+        <span>MY TKT</span>
+        <div class="ticket-badge-pill" id="userTicketBadge">Pending</div>
+      </div>
+
+      <!-- LEADERBOARD TAB -->
+      <div class="side-icon-item" id="sideTabLeaderboard" onclick="switchSideTab('leaderboard')">
+        <div class="side-icon-box">🏆</div>
+        <span>TOP</span>
+      </div>
+
+      <!-- DISCORD LINK -->
+      <a class="side-icon-item" id="sideDiscordBtn" href="DISCORD_LINK_BURAYA" target="_blank" style="text-decoration:none; color:#5865F2; margin-top:auto;">
+        <div class="side-icon-box" style="border-color:#5865F2; background:#0d1020;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#5865F2" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+        </div>
+        <span style="color:#5865F2;">DISCORD</span>
+      </a>
+    </div>
+
+    <!-- CHAT PANEL -->
+    <div class="side-chat-col" id="sideChatPanel">
+      <div class="chat-top-header">
+        <div class="online-tag">
+          <div class="online-dot"></div>
+          <span id="chatOnlineCounter">1 Online</span>
+        </div>
+        <button class="btn-close-chat" onclick="closeSideNav()">✕</button>
+      </div>
+      <div class="chat-messages-container" id="chatMessagesBox"></div>
+      <form class="chat-input-bar" onsubmit="handleSendChat(event)">
+        <input type="text" id="chatInputText" class="chat-input" placeholder="Type a message..." autocomplete="off">
+        <button type="submit" class="btn-send-chat">→</button>
+      </form>
+    </div>
+
+    <!-- TICKET TRANSACTIONS PANEL -->
+    <div class="ticket-transactions-panel" id="sideTicketsPanel">
+      <div class="tt-header">
+        <span class="tt-header-title">🎫 Ticket Transactions</span>
+        <button class="btn-close-chat" onclick="closeSideNav()">✕</button>
+      </div>
+      <div class="tt-list" id="ttListContainer">
+        <div class="tt-empty">No tickets yet.</div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD PANEL -->
+    <div class="ticket-transactions-panel" id="sideLeaderboardPanel">
+      <div class="tt-header">
+        <span class="tt-header-title">🏆 Leaderboard</span>
+        <button class="btn-close-chat" onclick="closeSideNav()">✕</button>
+      </div>
+      <div style="display:flex; gap:5px; padding:8px 10px 4px; flex-shrink:0;">
+        <button class="lb-tab active" id="lbTabProfit" onclick="switchLbTab('profit')" style="font-size:0.65rem; padding:6px 4px;">📈 Top Earners</button>
+        <button class="lb-tab" id="lbTabDuels" onclick="switchLbTab('duels')" style="font-size:0.65rem; padding:6px 4px;">⚔️ Most Duels</button>
+        <button class="lb-tab" id="lbTabVal" onclick="switchLbTab('val')" style="font-size:0.65rem; padding:6px 4px;">💎 Highest Val</button>
+      </div>
+      <div class="tt-list" id="lbListContainer">
+        <div class="lb-loading">⏳ Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <div id="matches-view">
+      <div class="active-giveaway-banner" id="activeGiveawayBanner" style="display:none;">
+        <div class="gw-left-content">
+          <div class="gw-item-icon" id="gwItemIcon"></div>
+          <div class="gw-info">
+            <div class="gw-title" id="gwItemTitle">Brainrot</div>
+            <div class="gw-details-row">
+              <span class="gw-val" id="gwItemVal">0 Value</span>
+              <div class="gw-joined-time-wrap">
+                <span class="gw-joined"><span id="gwJoinedCount">0</span> Joined</span>
+                <span class="gw-time-black"><span id="gwTimerText">24:00</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-gw-join" id="btnJoinGw" onclick="joinGiveaway()">Join</button>
+      </div>
+
+      <div class="controls-panel">
+        <button class="btn-create-match" onclick="openCreateMatchModal()">Create<br>Match</button>
+        <div class="profit-box">
+          <div class="title">Your Profit:</div>
+          <div class="profit-num" id="profitDisplay">0</div>
+        </div>
+        <div class="ratio-bar">
+          <span class="chip chip-black">K</span> <span id="blackCount">0</span>
+          <span class="chip chip-white" style="margin-left: 6px;">D</span> <span id="whiteCount">0</span>
+        </div>
+        <button class="btn-toggle-matches" id="filterToggleBtn" onclick="toggleFilter()">Active Matches</button>
+      </div>
+      <div class="matches-list" id="matchesContainer"></div>
+    </div>
+
+    <!-- INVENTORY VIEW -->
+    <div id="inventory-view" class="sub-view">
+      <div class="inventory-header-row">
+        <div class="inventory-title">Inventory (<span id="invCountText">0</span>)</div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-blox-deposit" onclick="openDepositModal()" style="background:#ffffff; color:#000;">Deposit +</button>
+        </div>
+      </div>
+
+      <!-- Verme Sistemi button - only shown for emirwg -->
+      <div id="vermeButtonWrapper" style="display:none; margin-bottom:12px;">
+        <button onclick="openVermeView()" style="width:100%; background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; font-weight:900; border:none; border-radius:10px; padding:13px; font-size:0.95rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 20px rgba(168,85,247,0.4);">
+          🎁 Give System
+        </button>
+      </div>
+
+      <input type="text" id="invSearchInput" class="search-bar-input" placeholder="🔍 Search Secret Brainrots..." oninput="handleSearch()">
+      <div class="inventory-list-container" id="inventoryListContainer"></div>
+      <button id="btnLoadMore" class="btn-load-more" onclick="loadMoreItems()" style="display:none;">Load More (+30)</button>
+    </div>
+
+    <!-- GIVE SYSTEM VIEW -->
+    <div id="verme-view" class="sub-view">
+      <div class="verme-header-row">
+        <div class="verme-title">🎁 Give System</div>
+        <button onclick="closeVermeView()" style="background:#18202c; border:1px solid #334155; color:#94a3b8; border-radius:8px; padding:7px 14px; font-size:0.82rem; font-weight:800; cursor:pointer;">← Back</button>
+      </div>
+
+      <!-- User Search -->
+      <div class="verme-search-bar">
+        <input type="text" id="vermeSearchInput" class="verme-search-input" placeholder="Enter username (e.g. PlayerName)" autocomplete="off" onkeydown="if(event.key==='Enter') searchVermeUser()">
+        <button class="verme-search-btn" onclick="searchVermeUser()">🔍 Search</button>
+      </div>
+
+      <div id="vermeContent">
+        <div class="verme-empty" style="padding:40px 0; font-size:0.9rem;">
+          ☝️ Search for a user above<br>
+          <span style="font-size:0.78rem; color:#334155;">Then give or take brainrots from their inventory</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONOCHROME AUTH MODAL -->
+  <div class="blox-auth-overlay" id="authModal">
+    <div class="blox-auth-card">
+      <div class="auth-title-bar">
+        <h3>Authorization</h3>
+        <button class="btn-close" onclick="closeAuthModal()">✕</button>
+      </div>
+      
+      <div id="step-username">
+        <input type="text" id="robloxInput" class="auth-input-mono" placeholder="Roblox Username" autocomplete="off">
+        <div class="blox-btn-row">
+          <button class="btn-auth-cancel" onclick="closeAuthModal()">CANCEL</button>
+          <button class="btn-auth-login" id="btnNextStep" onclick="handleUsernameSubmit()">NEXT</button>
+        </div>
+      </div>
+
+      <div id="step-verify" style="display:none;">
+        <div class="auth-input-mono" id="authUsernameDisplay" style="margin-bottom:10px;">username</div>
+        
+        <div class="sec-words-head">Security words</div>
+        <div class="sec-words-desc">Please put this code into your Roblox description so we can confirm this is you:</div>
+
+        <div class="rbx-mock-card">
+          <div class="rbx-mock-user">
+            <div class="rbx-mock-avatar">
+              <img id="rpAvatarPreview" src="https://tr.rbxcdn.com/default.png" alt="Avatar">
+            </div>
+            <div>
+              <div class="rbx-mock-name" id="rpDisplayname">User</div>
+              <div class="rbx-mock-tag" id="rpUsername">@user</div>
+            </div>
+          </div>
+          <div class="rbx-mock-tabs">
+            <span class="tab-active">About</span>
+            <span>Creations</span>
+          </div>
+          <div class="rbx-mock-about-title">About ✏️</div>
+          <div class="rbx-mock-phrase-box">
+            <div class="rbx-mock-phrase-text" id="rpWordsInCard">loading words...</div>
+            <div class="rbx-mock-arrow">
+              <svg width="34" height="24" viewBox="0 0 34 24" fill="none">
+                <path d="M28 2C24 14 12 18 4 19M4 19L9 15M4 19L8 22" stroke="#000000" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec-phrase-display" id="verifyWordsDisplay"></div>
+
+        <button class="btn-copy-all" id="btnCopyWords" onclick="copySecurityWords()">
+          COPY ALL 📋
+        </button>
+
+        <div class="blox-btn-row">
+          <button class="btn-auth-login" id="btnLoginConfirm" onclick="handleVerify()">
+            LOG IN
+          </button>
+          <button class="btn-auth-cancel" onclick="backToStep1()">CANCEL</button>
+        </div>
+      </div>
+
+      <div id="step-password" style="display:none;">
+        <p style="text-align:center; color:#cbd5e1; font-size:0.85rem; margin-bottom:12px;">Password Required</p>
+        <input type="password" id="adminPasswordInput" class="auth-input-mono" placeholder="Enter Password">
+        <div class="blox-btn-row">
+          <button class="btn-auth-cancel" onclick="backToStep1()">BACK</button>
+          <button class="btn-auth-login" onclick="verifyAdminPassword()">UNLOCK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GIVEAWAY CONFIRMATION MODAL -->
+  <div class="blox-auth-overlay" id="gwConfirmModal" style="display:none;">
+    <div class="blox-auth-card" style="text-align:center; max-width:340px;">
+      <div style="font-size:2rem; margin-bottom:10px;">🎁</div>
+      <h3 style="font-size:1.15rem; font-weight:900; color:#fff; margin-bottom:8px;">Host a Giveaway?</h3>
+      <p style="font-size:0.83rem; color:#94a3b8; margin-bottom:6px; line-height:1.45;">Are you sure you want to host a giveaway for:</p>
+      <div id="gwConfirmItemName" style="font-size:1rem; font-weight:900; color:#facc15; margin-bottom:16px; font-style:italic;"></div>
+      <p style="font-size:0.8rem; color:#64748b; margin-bottom:16px;">This item will be <b style="color:#ef4444;">removed</b> from your inventory and given to a random winner.</p>
+      <div style="font-size:2rem; font-weight:900; color:#a855f7; margin-bottom:14px;" id="gwConfirmCountdown">5</div>
+      <div class="blox-btn-row">
+        <button class="blox-btn-cancel" onclick="cancelGwConfirm()">CANCEL</button>
+        <button class="blox-btn-primary" id="gwConfirmBtn" onclick="confirmGiveaway()" disabled style="opacity:0.4; cursor:not-allowed; background:#22c55e; color:#000;">CONFIRM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GIVEAWAY WINNER MODAL -->
+  <div class="blox-auth-overlay" id="gwWinnerModal" style="display:none;">
+    <div class="blox-auth-card" style="text-align:center; max-width:340px; border-color:#facc15; box-shadow:0 0 35px rgba(250,204,21,0.3);">
+      <div style="font-size:2.5rem; margin-bottom:8px;">🏆</div>
+      <h3 style="font-size:1.3rem; font-weight:900; color:#facc15; margin-bottom:6px;">GIVEAWAY ENDED!</h3>
+      <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:10px;">Winner of <b id="gwWinnerItem" style="color:#fff;"></b>:</p>
+      <div id="gwWinnerName" style="font-size:1.5rem; font-weight:900; color:#ffffff; background:#1a1a2e; border:2px solid #facc15; border-radius:12px; padding:12px; margin-bottom:18px;"></div>
+      <button class="blox-btn-primary" style="width:100%; background:#facc15; color:#000;" onclick="closeGwWinnerModal()">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- ADMIN TICKET LOGS MODAL -->
+  <div class="ticket-log-modal" id="adminTicketLogModal">
+    <div class="ticket-log-card">
+      <div class="modal-header">
+        <h2>Ticket Logs 🎫</h2>
+        <button class="btn-close" onclick="closeTicketLogs()">✕</button>
+      </div>
+      <div id="ticketLogsContainer" style="max-height:350px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN TICKET CHAT MODAL -->
+  <div class="custom-popup-overlay" id="adminTicketChatModal">
+    <div class="custom-popup-card">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="admTicketTypeBadge" class="tt-type-badge tt-type-deposit">📥 DEPOSIT</span>
+          <h3 style="font-size:1.05rem; font-weight:900;" id="admTicketChatTitle">Ticket Chat</h3>
+        </div>
+        <button class="btn-close" onclick="closeAdminTicketChat()">✕</button>
+      </div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;" id="admTicketActionBar">
+        <button onclick="if(currentAdminViewingTicketId) closeTicket(currentAdminViewingTicketId); closeAdminTicketChat();" style="flex:1; background:#1e293b; border:1px solid #ef4444; color:#ef4444; font-size:0.8rem; font-weight:900; border-radius:8px; padding:8px; cursor:pointer;">✕ Close Ticket</button>
+      </div>
+      <div id="admTicketInfoBar" style="background:#141a24; padding:8px 12px; border-radius:8px; border:1px solid #1e2634; margin-bottom:10px; font-size:0.78rem; color:#94a3b8;"></div>
+      <div class="ticket-chat-box" id="admTicketMessagesBox"></div>
+      <form onsubmit="handleSendAdminTicketMsg(event)" style="display:flex; gap:8px;">
+        <input type="text" id="admTicketInput" class="chat-input" placeholder="Type reply, .ver, .withdraw..." autocomplete="off">
+        <button type="submit" class="btn-send-chat">→</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- USER TICKET CHAT MODAL -->
+  <div class="custom-popup-overlay" id="userTicketChatModal">
+    <div class="custom-popup-card">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="uTicketTypeBadge" class="tt-type-badge tt-type-deposit">📥 DEPOSIT</span>
+          <h3 style="font-size:1.05rem; font-weight:900;" id="uTicketTitle">Ticket</h3>
+        </div>
+        <button class="btn-close" onclick="closeUserTicketView()">✕</button>
+      </div>
+      <div style="background:#141a24; padding:10px 12px; border-radius:10px; border:1px solid #1e2634; margin-bottom:12px; font-size:0.82rem;">
+        <div><b>Item:</b> <span id="uTicketBrainrot" style="color:#facc15; font-weight:900;">-</span></div>
+        <div style="margin-top:4px;"><b>Status:</b> <span id="uTicketStatus" style="color:#22c55e; font-weight:900;">Pending</span></div>
+        <div style="margin-top:4px; color:#64748b; font-size:0.75rem;" id="uTicketExtraInfo"></div>
+      </div>
+      <div class="ticket-chat-box" id="uTicketMessagesBox"></div>
+      <form onsubmit="handleSendUserTicketMsg(event)" style="display:flex; gap:8px;">
+        <input type="text" id="uTicketInput" class="chat-input" placeholder="Chat with admin..." autocomplete="off">
+        <button type="submit" class="btn-send-chat">→</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CREATE MATCH MODAL -->
+  <div class="modal-overlay" id="createMatchModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Create Match</h2>
+        <button class="btn-close" onclick="closeCreateMatchModal()">✕</button>
+      </div>
+      <div style="font-size:1rem; font-weight:800; color:#fff; margin-bottom:10px;" id="selectedValDisplay">Value: 0</div>
+      <div class="modal-items-grid" id="modalItemsPicker"></div>
+      
+      <div class="side-picker">
+        <div class="side-card active" id="sideSelectK" onclick="selectCoinSide('K')">
+          <div class="coin-preview-large coin-large-k">K</div>
+          <span>K</span>
+        </div>
+        <div class="side-card" id="sideSelectD" onclick="selectCoinSide('D')">
+          <div class="coin-preview-large coin-large-d">D</div>
+          <span>D</span>
+        </div>
+      </div>
+      <button class="blox-btn-primary" style="width:100%; padding:14px;" onclick="confirmCreatedMatch()">CONFIRM MATCH</button>
+    </div>
+  </div>
+
+  <!-- 3D ROLLING ARENA -->
+  <div class="bloxluck-arena-overlay" id="bloxluckArena">
+    <div class="arena-main-card">
+      <div style="font-size:0.8rem; font-weight:800; color:#64748b; margin-bottom:16px;">COINFLIP DUEL</div>
+      <div class="arena-duelists">
+        <div class="duelist-box" id="boxPlayer1">
+          <div class="duelist-avatar"><img id="arenaP1Avatar" src="" alt="P1"></div>
+          <div class="duelist-name" id="arenaP1Name">Player 1</div>
+          <span class="chip" id="arenaP1Chip">K</span>
+          <div class="duelist-val" id="arenaP1Val">0 Val</div>
+        </div>
+        <div class="arena-vs">VS</div>
+        <div class="duelist-box" id="boxPlayer2">
+          <div class="duelist-avatar"><img id="arenaP2Avatar" src="" alt="P2"></div>
+          <div class="duelist-name" id="arenaP2Name">Player 2</div>
+          <span class="chip" id="arenaP2Chip">D</span>
+          <div class="duelist-val" id="arenaP2Val">0 Val</div>
+        </div>
+      </div>
+      <div class="coin-stage">
+        <div class="flipper-coin" id="flipperCoin">
+          <div class="coin-face face-k"><div class="chip-badge">K</div></div>
+          <div class="coin-face face-d"><div class="chip-badge">D</div></div>
+        </div>
+      </div>
+      <div style="font-size:1.5rem; font-weight:900; color:#fff;" id="bloxluckStatus">Rolling...</div>
+    </div>
+  </div>
+
+  <!-- RESULT POPUP -->
+  <div class="result-popup-overlay" id="resultPopup">
+    <div class="result-popup-card" id="resultCard">
+      <div class="result-popup-title" id="resTitle">VICTORY!</div>
+      <div class="result-popup-desc" id="resDesc">Duel reward credited to your inventory.</div>
+      <div class="result-popup-val" id="resVal">+0 Value</div>
+      <button class="blox-btn-primary" style="width:100%; padding:14px;" onclick="closeResultPopup()">CONTINUE</button>
+    </div>
+  </div>
+
+  <!-- DEPOSIT TICKET MODAL -->
+  <div class="custom-popup-overlay" id="depositModal">
+    <div class="custom-popup-card">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+        <div style="background:#ffffff; color:#000; font-size:0.68rem; font-weight:900; padding:3px 8px; border-radius:5px; letter-spacing:1px;">DEPOSIT</div>
+        <h3 style="font-size:1.1rem; font-weight:900; color:#fff;">Create Deposit Ticket</h3>
+      </div>
+      <p style="font-size:0.82rem; color:#64748b; margin-bottom:14px; line-height:1.4;">Enter your Roblox username and the Secret Brainrot you want to deposit. Admin will send a trade request shortly.</p>
+      <input type="text" id="depRobloxUser" class="blox-input" placeholder="Roblox Username" autocomplete="off" style="margin-bottom:10px;">
+      <input type="text" id="depBrainrot" class="blox-input" placeholder="Secret Brainrot Name" autocomplete="off">
+      <div class="blox-btn-row">
+        <button class="blox-btn-cancel" onclick="closeDepositModal()">CANCEL</button>
+        <button class="blox-btn-primary" onclick="submitDepositTicket()">📥 DEPOSIT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WITHDRAW TICKET MODAL -->
+  <div class="custom-popup-overlay" id="withdrawModal">
+    <div class="custom-popup-card">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+        <div style="background:#facc15; color:#000; font-size:0.68rem; font-weight:900; padding:3px 8px; border-radius:5px; letter-spacing:1px;">WITHDRAW</div>
+        <h3 style="font-size:1.1rem; font-weight:900; color:#fff;">Withdraw Request</h3>
+      </div>
+      <p style="font-size:0.82rem; color:#64748b; margin-bottom:10px; line-height:1.4;">Select one or more items to withdraw. Admin will trade them to your Roblox account after approval.</p>
+      <div id="withdrawSummaryBar" style="display:none; background:#1a2414; border:1.5px solid #2d4a1a; border-radius:10px; padding:9px 12px; margin-bottom:10px; font-size:0.8rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#94a3b8; font-weight:800;"><span id="withdrawSelectedCount">0</span> item selected</span>
+          <span style="color:#facc15; font-weight:900;">Total: <span id="withdrawTotalVal">0</span></span>
+        </div>
+      </div>
+      <div id="withdrawItemPicker" style="display:flex; flex-direction:column; gap:7px; max-height:240px; overflow-y:auto; margin-bottom:14px; padding-right:2px;">
+        <div style="text-align:center; color:#64748b; font-size:0.82rem; padding:20px 0;">Loading inventory...</div>
+      </div>
+      <div class="blox-btn-row">
+        <button class="blox-btn-cancel" onclick="closeWithdrawModal()">CANCEL</button>
+        <button class="blox-btn-primary" onclick="submitWithdrawTicket()" id="btnSubmitWithdraw" style="background:#facc15; color:#000;">📤 REQUEST WITHDRAW</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let socket = null;
+    let currentUser = null;
+    let selectedCoin = 'K';
+    let myMatchesOnly = false;
+    let targetAdminUser = "";
+    let pendingAuthUser = null;
+    let generatedWords = "";
+    let matches = [];
+    let fullInventory = [];
+    let filteredInventory = [];
+    let displayedCount = 30;
+    let tickets = [];
+    let blackWins = 0;
+    let whiteWins = 0;
+    let activeGiveaway = null;
+    let gwTimerInterval = null;
+    let handledDuelIds = new Set();
+    let currentAdminViewingTicketId = null;
+
+    // ===== NOTIFICATION BADGE SYSTEM =====
+    let menuUnreadCount = 0;
+    // ticketId -> unread msg count (for tickets tab per-card badge)
+    let ticketUnreadMap = {};
+    // set of ticket IDs seen by user (tickets panel opened = all cleared)
+    let seenTicketIds = new Set();
+
+    function incrementMenuBadge(amount = 1) {
+      menuUnreadCount += amount;
+      const badge = document.getElementById('menuNotifBadge');
+      if (badge) {
+        badge.innerText = menuUnreadCount > 99 ? '99+' : menuUnreadCount;
+        badge.classList.add('show');
+      }
+    }
+
+    function clearMenuBadge() {
+      menuUnreadCount = 0;
+      const badge = document.getElementById('menuNotifBadge');
+      if (badge) {
+        badge.classList.remove('show');
+        badge.innerText = '0';
+      }
+    }
+
+    function incrementTicketTabBadge(amount = 1) {
+      const badge = document.getElementById('ticketTabBadge');
+      if (!badge) return;
+      const cur = parseInt(badge.innerText || '0', 10) || 0;
+      const next = cur + amount;
+      badge.innerText = next > 99 ? '99+' : next;
+      badge.classList.add('show');
+    }
+
+    function clearTicketTabBadge() {
+      const badge = document.getElementById('ticketTabBadge');
+      if (badge) { badge.innerText = '0'; badge.classList.remove('show'); }
+      ticketUnreadMap = {};
+    }
+
+    // ===== SIDE NAV TAB SWITCHING =====
+    let currentSideTab = 'chat';
+
+    function switchSideTab(tab) {
+      currentSideTab = tab;
+      const chatPanel = document.getElementById('sideChatPanel');
+      const ticketsPanel = document.getElementById('sideTicketsPanel');
+      const lbPanel = document.getElementById('sideLeaderboardPanel');
+      const tabChat = document.getElementById('sideTabChat');
+      const tabTickets = document.getElementById('sideTabTickets');
+      const tabLb = document.getElementById('sideTabLeaderboard');
+
+      // Hide all panels, deactivate all tabs
+      [chatPanel, ticketsPanel, lbPanel].forEach(p => { if(p) { p.style.display = 'none'; p.classList.remove('active'); } });
+      [tabChat, tabTickets, tabLb].forEach(t => { if(t) t.classList.remove('active'); });
+
+      if (tab === 'chat') {
+        chatPanel.style.display = 'flex';
+        chatPanel.classList.add('active');
+        tabChat.classList.add('active');
+      } else if (tab === 'tickets') {
+        ticketsPanel.style.display = 'flex';
+        ticketsPanel.classList.add('active');
+        tabTickets.classList.add('active');
+        tickets.forEach(t => seenTicketIds.add(t.id));
+        clearTicketTabBadge();
+        renderTicketTransactions();
+      } else if (tab === 'leaderboard') {
+        lbPanel.style.display = 'flex';
+        lbPanel.classList.add('active');
+        if(tabLb) tabLb.classList.add('active');
+        loadLbData(currentLbTab);
+      }
+    }
+
+    // ===== RENDER TICKET TRANSACTIONS PANEL =====
+    function renderTicketTransactions() {
+      const container = document.getElementById('ttListContainer');
+      if (!container) return;
+
+      if (!tickets.length) {
+        container.innerHTML = '<div class="tt-empty">No tickets yet.</div>';
+        return;
+      }
+
+      const isOwner = currentUser && (currentUser.name.toLowerCase() === 'emirwg' || currentUser.name.toLowerCase() === 'bennaref');
+      const myName = (currentUser?.name || '').toLowerCase();
+
+      // Owners see all tickets; regular users see only their own
+      const visible = isOwner ? tickets : tickets.filter(t => (t.user || '').toLowerCase() === myName);
+
+      if (!visible.length) {
+        container.innerHTML = '<div class="tt-empty">No tickets found for your account.</div>';
+        return;
+      }
+
+      container.innerHTML = visible.map(t => {
+        const unreadCount = ticketUnreadMap[t.id] || 0;
+        const isNew = !seenTicketIds.has(t.id);
+        const hasUnread = unreadCount > 0 || isNew;
+        const statusClass = (t.status || 'pending').toLowerCase().includes('verified') ? 'verified' : ((t.status || '').toLowerCase().includes('closed') ? 'closed' : 'pending');
+        const msgCount = (t.messages || []).filter(m => !m.isSystem).length;
+        const canClose = isOwner && (t.status || '').toLowerCase() !== 'closed';
+        return `
+        <div class="tt-card ${hasUnread ? 'has-unread' : ''}" style="${statusClass==='closed'?'opacity:0.5;':''}">
+          <div onclick="openTicketFromPanel('${t.id}')" style="cursor:pointer;">
+          <div class="tt-card-top">
+            <span class="tt-card-id">${t.id}</span>
+            <span class="tt-card-status ${statusClass}">${t.status || 'Pending'}</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
+            <div class="tt-card-user">@${t.user}</div>
+            <span class="tt-type-badge ${t.ticketType === 'withdraw' ? 'tt-type-withdraw' : 'tt-type-deposit'}">${t.ticketType === 'withdraw' ? '📤 WITHDRAW' : '📥 DEPOSIT'}</span>
+          </div>
+          <div class="tt-card-brainrot">${t.ticketType === 'withdraw' ? '🟡' : '🎭'} ${t.brainrot}</div>
+          <div class="tt-card-meta">
+            <span class="tt-card-type">${msgCount} msg${msgCount !== 1 ? 's' : ''}</span>
+            <span class="tt-card-unread ${unreadCount > 0 ? 'show' : ''}">+${unreadCount} new</span>
+            <span class="tt-card-time">${t.time || ''}</span>
+          </div>
+          </div>
+          ${canClose ? `<button onclick="closeTicket('${t.id}')" style="width:100%; margin-top:8px; background:#1e293b; border:1px solid #ef4444; color:#ef4444; font-size:0.75rem; font-weight:900; border-radius:6px; padding:6px; cursor:pointer;">✕ Close Ticket</button>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    function openTicketFromPanel(ticketId) {
+      const isOwner = currentUser && (currentUser.name.toLowerCase() === 'emirwg' || currentUser.name.toLowerCase() === 'bennaref');
+      // Clear unread for this ticket
+      ticketUnreadMap[ticketId] = 0;
+      seenTicketIds.add(ticketId);
+      renderTicketTransactions();
+
+      if (isOwner) {
+        currentAdminViewingTicketId = ticketId;
+        renderAdminTicketChat();
+        document.getElementById('adminTicketChatModal').style.display = 'flex';
+      } else {
+        openUserTicketView(ticketId);
+      }
+    }
+
+    // ===== ORIGINAL CODE (unchanged) =====
+
+    function getMyMatchesStorageKey() {
+      return 'kd_my_matches_' + (currentUser ? currentUser.name.toLowerCase() : 'guest');
+    }
+
+    function getMySavedMatches() {
+      try {
+        return JSON.parse(localStorage.getItem(getMyMatchesStorageKey()) || '[]');
+      } catch(e) { return []; }
+    }
+
+    function saveMySavedMatches(list) {
+      localStorage.setItem(getMyMatchesStorageKey(), JSON.stringify(list));
+    }
+
+    function handleImgError(el, name) {
+      if (!el.dataset.step) {
+        el.dataset.step = '1';
+        el.src = el.src.replace(/\.png$/i, '.webp');
+      } else if (el.dataset.step === '1') {
+        el.dataset.step = '2';
+        el.src = el.src.replace(/\.webp$/i, '.jpg');
+      } else {
+        el.onerror = null;
+        const initial = name ? name.substring(0, 2).toUpperCase() : "BR";
+        el.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="%23141b26"/><text x="32" y="38" font-family="sans-serif" font-size="20" font-weight="900" fill="%23facc15" text-anchor="middle">${initial}</text></svg>`;
+      }
+    }
+
+    function getItemImgUrl(item) {
+      if (item.img) return item.img;
+      if (item.image) return item.image;
+      const safe = (item.name || "").trim().replace(/ /g, "_");
+      return `https://stealabrainrot.fandom.com/wiki/Special:FilePath/${encodeURIComponent(safe)}.png`;
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('siteToast');
+      const icon = document.getElementById('toastIcon');
+      const msg = document.getElementById('toastMsg');
+      if (!toast) return;
+      toast.className = `site-toast ${type}`;
+      msg.innerText = message;
+      icon.innerText = type === 'success' ? '✅' : (type === 'error' ? '❌' : 'ℹ️');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    async function loadUserDataFromServer(username) {
+      if (!username) return;
+      try {
+        const res = await fetch(`/api/user-data/${encodeURIComponent(username)}?t=${Date.now()}`);
+        const data = await res.json();
+        if (data.success && data.userData) {
+          fullInventory = data.userData.inventory || [];
+          filteredInventory = [...fullInventory];
+          displayedCount = 30;
+          renderInventory();
+          const savedProfit = typeof data.userData.profit === 'number' ? data.userData.profit : 0;
+          localStorage.setItem('kd_profit', savedProfit.toString());
+          updateProfitUI(savedProfit);
+        }
+      } catch (e) {}
+    }
+
+    function updateProfitUI(val) {
+      const pEl = document.getElementById('profitDisplay');
+      if (pEl) pEl.innerText = val.toLocaleString();
+    }
+
+    async function syncUserDataToServer(newProfit) {
+      if (!currentUser) return;
+      try {
+        await fetch('/api/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: currentUser.name, inventory: fullInventory, profit: newProfit })
+        });
+      } catch (e) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const savedUser = localStorage.getItem('kd_user');
+      if (savedUser) {
+        try {
+          currentUser = JSON.parse(savedUser);
+          renderLoggedInState();
+          await loadUserDataFromServer(currentUser.name);
+        } catch (e) {}
+      }
+      fetchInitialMatches();
+      fetchInitialTickets();
+      fetchInitialGiveaway();
+      setupWebSocket();
+      // Check for saved giveaway winner
+      try {
+        const savedWinner = localStorage.getItem('kd_gw_winner');
+        if (savedWinner) {
+          const wData = JSON.parse(savedWinner);
+          if (wData && wData.winner) showGiveawayWinner(wData);
+        }
+      } catch(e) {}
+      // init side tab to chat
+      switchSideTab('chat');
+    });
+
+    async function fetchInitialMatches() {
+      try {
+        const res = await fetch('/api/matches');
+        const data = await res.json();
+        if (data.success && data.matches) { matches = data.matches; renderMatches(); }
+      } catch(e) {}
+    }
+
+    async function fetchInitialTickets() {
+      try {
+        const res = await fetch('/api/tickets');
+        const data = await res.json();
+        if (data.success && data.tickets) {
+          tickets = data.tickets;
+          updateAllTicketCounters();
+          renderTicketTransactions();
+        }
+      } catch(e) {}
+    }
+
+    async function fetchInitialGiveaway() {
+      try {
+        const res = await fetch('/api/giveaway');
+        const data = await res.json();
+        if (data.success && data.giveaway) { activeGiveaway = data.giveaway; updateGiveawayUI(); }
+      } catch(e) {}
+    }
+
+    function setupWebSocket() {
+      try {
+        const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        socket = new WebSocket(`${wsProto}//${location.host}`);
+        socket.onmessage = (e) => {
+          const data = JSON.parse(e.data);
+          if (data.type === 'sync_matches') {
+            matches = data.matches || [];
+            renderMatches();
+          } else if (data.type === 'sync_tickets') {
+            tickets = data.tickets || [];
+            updateAllTicketCounters();
+            renderTicketTransactions();
+          } else if (data.type === 'sync_giveaway') {
+            activeGiveaway = data.giveaway;
+            updateGiveawayUI();
+          } else if (data.type === 'ticket_created') {
+            tickets.unshift(data.ticket);
+            updateAllTicketCounters();
+            // NEW TICKET → badge on hamburger + tickets tab
+            const sideOpen = document.getElementById('sideNavWrapper').classList.contains('open');
+            if (!sideOpen || currentSideTab !== 'tickets') {
+              incrementMenuBadge(1);
+              incrementTicketTabBadge(1);
+            }
+            renderTicketTransactions();
+          } else if (data.type === 'new_ticket_message') {
+            const t = tickets.find(x => x.id === data.ticketId);
+            if (t) {
+              if (!t.messages) t.messages = [];
+              t.messages.push(data.message);
+              // Track unread per ticket
+              const sideOpen = document.getElementById('sideNavWrapper').classList.contains('open');
+              const ticketsTabActive = sideOpen && currentSideTab === 'tickets';
+              if (!ticketsTabActive) {
+                ticketUnreadMap[data.ticketId] = (ticketUnreadMap[data.ticketId] || 0) + 1;
+                incrementMenuBadge(1);
+                incrementTicketTabBadge(1);
+              }
+              renderUserTicketChat();
+              renderAdminTicketChat();
+              renderTicketTransactions();
+            }
+          } else if (data.type === 'match_created') {
+            if (!matches.some(m => m.id === data.match.id)) {
+              matches.unshift(data.match);
+              renderMatches();
+            }
+          } else if (data.type === 'match_cancelled' || data.type === 'match_removed_public') {
+            matches = matches.filter(m => m.id !== data.matchId);
+            renderMatches();
+          } else if (data.type === 'duel_started') {
+            const mIdx = matches.findIndex(m => m.id === data.match.id);
+            if (mIdx !== -1) matches[mIdx] = data.match;
+            renderMatches();
+            if (!handledDuelIds.has(data.match.id)) {
+              handledDuelIds.add(data.match.id);
+              playDuel(data.match);
+            }
+          } else if (data.type === 'user_data_updated') {
+            if (currentUser && currentUser.name.toLowerCase() === String(data.targetUser).toLowerCase()) {
+              fullInventory = data.userData.inventory || [];
+              filteredInventory = [...fullInventory];
+              renderInventory();
+              if (data.toast) showToast(data.toast, data.toastType || 'info');
+            }
+          }
+        };
+      } catch(e) {}
+    }
+
+    function handleSendChat(event) {
+      event.preventDefault();
+      const input = document.getElementById('chatInputText');
+      const text = (input?.value || '').trim();
+      if (!text || !currentUser) return;
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({
+          type: 'send_chat',
+          senderName: currentUser.name,
+          senderAvatar: currentUser.avatar,
+          text
+        }));
+      }
+      input.value = '';
+    }
+
+    function handleSearch() {
+      const q = document.getElementById('invSearchInput').value.toLowerCase().trim();
+      filteredInventory = q ? fullInventory.filter(i => i.name.toLowerCase().includes(q)) : [...fullInventory];
+      displayedCount = 30;
+      renderInventory();
+    }
+
+    function loadMoreItems() {
+      displayedCount += 30;
+      renderInventory();
+    }
+
+    function renderInventory() {
+      const container = document.getElementById('inventoryListContainer');
+      const countSpan = document.getElementById('invCountText');
+      const loadMoreBtn = document.getElementById('btnLoadMore');
+      countSpan.innerText = fullInventory.length;
+      if (!filteredInventory.length) {
+        container.innerHTML = `<div class="empty-state">No Secret Brainrots found.</div>`;
+        loadMoreBtn.style.display = 'none';
+        return;
+      }
+      const itemsToRender = filteredInventory.slice(0, displayedCount);
+      container.innerHTML = itemsToRender.map(item => {
+        const imgUrl = getItemImgUrl(item);
+        return `
+        <div class="inv-row-item">
+          <div class="inv-row-left">
+            <div class="inv-row-icon">
+              <img src="${imgUrl}" loading="lazy" referrerpolicy="no-referrer" alt="${item.name}"
+                onerror="handleImgError(this, '${item.name}')">
+            </div>
+            <div class="inv-row-info">
+              <span class="inv-row-name">${item.name}</span>
+              <span class="inv-row-val">Value: ${(item.value || 100000000).toLocaleString()}</span>
+            </div>
+          </div>
+          <div class="inv-row-actions">
+            <button class="btn-row-withdraw" onclick="promptWithdraw('${item.id}')">Withdraw</button>
+            <button class="btn-row-giveaway" onclick="promptHostGiveaway('${item.id}')">Giveaway</button>
+          </div>
+        </div>`;
+      }).join('');
+      loadMoreBtn.style.display = (displayedCount < filteredInventory.length) ? 'block' : 'none';
+    }
+
+    // ===== WITHDRAW - MULTI SELECT =====
+    let withdrawSelectedIds = new Set();
+
+    function promptWithdraw(itemId) {
+      if (!currentUser) return openAuthModal();
+      openWithdrawModal(itemId);
+    }
+
+    function openWithdrawModal(preSelectedItemId) {
+      if (!currentUser) return openAuthModal();
+      if (!fullInventory.length) return showToast("Your inventory is empty!", "error");
+
+      withdrawSelectedIds = new Set();
+      if (preSelectedItemId) withdrawSelectedIds.add(preSelectedItemId);
+
+      renderWithdrawPicker();
+      updateWithdrawSummary();
+      document.getElementById('withdrawModal').style.display = 'flex';
+    }
+
+    function renderWithdrawPicker() {
+      const picker = document.getElementById('withdrawItemPicker');
+      picker.innerHTML = fullInventory.map(item => {
+        const imgUrl = getItemImgUrl(item);
+        const isSel = withdrawSelectedIds.has(item.id);
+        return `
+        <div class="withdraw-pick-row" data-id="${item.id}" onclick="toggleWithdrawItem('${item.id}')"
+          style="display:flex; align-items:center; gap:10px; padding:9px 10px; background:${isSel ? '#1a2a14' : '#141a24'}; border:1.5px solid ${isSel ? '#22c55e' : '#1e2634'}; border-radius:10px; cursor:pointer; transition:all 0.15s; user-select:none;">
+          <div style="width:38px; height:38px; background:#0a0e14; border-radius:8px; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+            <img src="${imgUrl}" style="width:100%; height:100%; object-fit:contain;" referrerpolicy="no-referrer" onerror="handleImgError(this, '${item.name}')">
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.85rem; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+            <div style="font-size:0.72rem; font-weight:800; color:#facc15;">Value: ${(item.value || 0).toLocaleString()}</div>
+          </div>
+          <div style="width:22px; height:22px; border-radius:6px; border:2px solid ${isSel ? '#22c55e' : '#334155'}; background:${isSel ? '#22c55e' : 'transparent'}; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:0.8rem; color:#000; font-weight:900; transition:all 0.15s;">${isSel ? '✓' : ''}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function toggleWithdrawItem(itemId) {
+      if (withdrawSelectedIds.has(itemId)) {
+        withdrawSelectedIds.delete(itemId);
+      } else {
+        withdrawSelectedIds.add(itemId);
+      }
+      renderWithdrawPicker();
+      updateWithdrawSummary();
+    }
+
+    function updateWithdrawSummary() {
+      const bar = document.getElementById('withdrawSummaryBar');
+      const countEl = document.getElementById('withdrawSelectedCount');
+      const totalEl = document.getElementById('withdrawTotalVal');
+      const count = withdrawSelectedIds.size;
+      if (count === 0) {
+        bar.style.display = 'none';
+      } else {
+        bar.style.display = 'block';
+        countEl.innerText = count;
+        const total = fullInventory
+          .filter(i => withdrawSelectedIds.has(i.id))
+          .reduce((s, i) => s + (i.value || 0), 0);
+        totalEl.innerText = total.toLocaleString();
+      }
+    }
+
+    function closeWithdrawModal() {
+      document.getElementById('withdrawModal').style.display = 'none';
+      withdrawSelectedIds = new Set();
+    }
+
+    function submitWithdrawTicket() {
+      if (!withdrawSelectedIds.size) return showToast("Select at least one item to withdraw!", "error");
+      if (!currentUser) return openAuthModal();
+
+      const selectedItems = fullInventory.filter(i => withdrawSelectedIds.has(i.id));
+      if (!selectedItems.length) return showToast("Selected items not found!", "error");
+
+      const robloxUser = currentUser.name;
+      const totalVal = selectedItems.reduce((s, i) => s + (i.value || 0), 0);
+      const itemListText = selectedItems.map((i, idx) => `  ${idx + 1}. ${i.name} — ${(i.value || 0).toLocaleString()} val`).join('\n');
+      const itemNamesShort = selectedItems.length === 1
+        ? selectedItems[0].name
+        : `${selectedItems.length} items`;
+
+      const newTicket = {
+        id: 'WD-' + Math.floor(1000 + Math.random() * 9000),
+        user: robloxUser,
+        brainrot: itemNamesShort,
+        itemValue: totalVal,
+        withdrawItems: selectedItems.map(i => ({ id: i.id, name: i.name, value: i.value || 0 })),
+        ticketType: 'withdraw',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'Pending',
+        messages: [
+          {
+            sender: 'System',
+            text: `📤 WITHDRAW REQUEST CREATED\n\n👤 User: @${robloxUser}\n📦 Items (${selectedItems.length}):\n${itemListText}\n\n💰 Total Value: ${totalVal.toLocaleString()}\n\nItems have been held from inventory. Admin will process this request and send a trade on Roblox.`,
+            isSystem: true
+          }
+        ]
+      };
+
+      // Remove selected items from inventory
+      const removedIds = new Set(selectedItems.map(i => i.id));
+      fullInventory = fullInventory.filter(i => !removedIds.has(i.id));
+      filteredInventory = [...fullInventory];
+      renderInventory();
+      syncUserDataToServer(parseInt(localStorage.getItem('kd_profit') || '0', 10));
+
+      tickets.unshift(newTicket);
+      if (socket && socket.readyState === 1) socket.send(JSON.stringify({ type: 'create_ticket', ticket: newTicket }));
+      closeWithdrawModal();
+      updateAllTicketCounters();
+      showToast(`Withdraw request submitted! Check the Tickets tab 📤`, "success");
+    }
+
+    // Giveaway confirmation state
+    let pendingGiveawayItemId = null;
+    let gwConfirmTimer = null;
+
+    function promptHostGiveaway(itemId) {
+      const item = fullInventory.find(i => i.id === itemId);
+      if (!item) return;
+      if (!currentUser) return openAuthModal();
+      pendingGiveawayItemId = itemId;
+      document.getElementById('gwConfirmItemName').innerText = item.name;
+      const btn = document.getElementById('gwConfirmBtn');
+      const countdown = document.getElementById('gwConfirmCountdown');
+      btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed';
+      let secs = 5;
+      countdown.innerText = secs;
+      document.getElementById('gwConfirmModal').style.display = 'flex';
+      if (gwConfirmTimer) clearInterval(gwConfirmTimer);
+      gwConfirmTimer = setInterval(() => {
+        secs--;
+        countdown.innerText = secs;
+        if (secs <= 0) {
+          clearInterval(gwConfirmTimer);
+          countdown.innerText = '✓';
+          btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+        }
+      }, 1000);
+    }
+
+    function cancelGwConfirm() {
+      if (gwConfirmTimer) clearInterval(gwConfirmTimer);
+      pendingGiveawayItemId = null;
+      document.getElementById('gwConfirmModal').style.display = 'none';
+    }
+
+    function confirmGiveaway() {
+      if (!pendingGiveawayItemId) return;
+      const item = fullInventory.find(i => i.id === pendingGiveawayItemId);
+      if (!item) return cancelGwConfirm();
+      document.getElementById('gwConfirmModal').style.display = 'none';
+      if (gwConfirmTimer) clearInterval(gwConfirmTimer);
+      pendingGiveawayItemId = null;
+      fullInventory = fullInventory.filter(i => i.id !== item.id);
+      filteredInventory = filteredInventory.filter(i => i.id !== item.id);
+      renderInventory();
+      const startTime = Date.now();
+      const endTime = startTime + (24 * 60 * 1000);
+      activeGiveaway = { hostName: currentUser.name, itemName: item.name, itemVal: item.value || 0, img: getItemImgUrl(item), startTime, endTime, joinedUsers: [] };
+      localStorage.removeItem('kd_gw_winner');
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({ type: 'start_giveaway', giveaway: activeGiveaway }));
+      }
+      updateGiveawayUI();
+      showToast(`Giveaway started for ${item.name}! 🎁`, "success");
+    }
+
+    function pickAndShowGiveawayWinner() {
+      if (!activeGiveaway) return;
+      let winner = '';
+      const users = activeGiveaway.joinedUsers || [];
+      if (users.length > 0) {
+        winner = users[Math.floor(Math.random() * users.length)];
+      } else {
+        winner = 'No participants';
+      }
+      const winnerData = { winner, item: activeGiveaway.itemName };
+      localStorage.setItem('kd_gw_winner', JSON.stringify(winnerData));
+      showGiveawayWinner(winnerData);
+    }
+
+    function showGiveawayWinner(data) {
+      document.getElementById('gwWinnerItem').innerText = data.item || '';
+      document.getElementById('gwWinnerName').innerText = data.winner ? `🎉 @${data.winner}` : '😔 No participants';
+      document.getElementById('gwWinnerModal').style.display = 'flex';
+    }
+
+    function closeGwWinnerModal() {
+      document.getElementById('gwWinnerModal').style.display = 'none';
+    }
+
+    function updateGiveawayUI() {
+      const banner = document.getElementById('activeGiveawayBanner');
+      if (!activeGiveaway) { banner.style.display = 'none'; if (gwTimerInterval) clearInterval(gwTimerInterval); return; }
+      banner.style.display = 'flex';
+      document.getElementById('gwItemIcon').innerHTML = `<img src="${activeGiveaway.img}" referrerpolicy="no-referrer">`;
+      document.getElementById('gwItemTitle').innerText = activeGiveaway.itemName;
+      document.getElementById('gwItemVal').innerText = `${activeGiveaway.itemVal.toLocaleString()} Value`;
+      document.getElementById('gwJoinedCount').innerText = activeGiveaway.joinedUsers.length;
+      const btn = document.getElementById('btnJoinGw');
+      const myName = (currentUser?.name || "").toLowerCase();
+      if (activeGiveaway.joinedUsers.includes(myName)) {
+        btn.innerText = "Joined ✓"; btn.className = "btn-gw-join joined";
+      } else {
+        btn.innerText = "Join"; btn.className = "btn-gw-join";
+      }
+      if (gwTimerInterval) clearInterval(gwTimerInterval);
+      gwTimerInterval = setInterval(() => {
+        const remaining = activeGiveaway.endTime - Date.now();
+        if (remaining <= 0) {
+          clearInterval(gwTimerInterval);
+          document.getElementById('gwTimerText').innerText = "Ended";
+          btn.innerText = "Ended"; btn.className = "btn-gw-join joined";
+          if (!localStorage.getItem('kd_gw_winner')) pickAndShowGiveawayWinner();
+        } else {
+          const mins = Math.floor(remaining / 60000);
+          const secs = Math.floor((remaining % 60000) / 1000);
+          document.getElementById('gwTimerText').innerText = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        }
+      }, 1000);
+    }
+
+    function joinGiveaway() {
+      if (!currentUser) return openAuthModal();
+      if (!activeGiveaway) return;
+      const myName = currentUser.name.toLowerCase();
+      if (activeGiveaway.joinedUsers.includes(myName)) return showToast("Already joined this giveaway!", "info");
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({ type: 'join_giveaway', username: currentUser.name }));
+      }
+      activeGiveaway.joinedUsers.push(myName);
+      updateGiveawayUI();
+      showToast("Joined giveaway successfully!", "success");
+    }
+
+    function toggleFilter() {
+      myMatchesOnly = !myMatchesOnly;
+      document.getElementById('filterToggleBtn').innerText = myMatchesOnly ? "Active Matches" : "My Matches";
+      renderMatches();
+    }
+
+    function renderMatches() {
+      const container = document.getElementById('matchesContainer');
+      const myName = (currentUser?.name || "").toLowerCase();
+      const userSaved = getMySavedMatches();
+
+      let list = myMatchesOnly
+        ? userSaved
+        : matches.filter(m => (m.status === 'open') && (m.creatorName || "").toLowerCase() !== myName);
+
+      if (myMatchesOnly) list = userSaved;
+
+      if (!list.length) {
+        container.innerHTML = `<div class="empty-state">${myMatchesOnly ? "You haven't created or played any matches yet." : "No active matches available."}</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(m => {
+        const isMy = myName && (m.creatorName || "").toLowerCase() === myName;
+        const p1Side = m.side || 'K';
+        const p2Side = p1Side === 'K' ? 'D' : 'K';
+
+        if (m.status === 'finished') {
+          const winnerSide = m.winnerSide || 'K';
+          const winnerChipHtml = winnerSide === 'K'
+            ? `<div class="chip chip-black" style="width:52px;height:52px;font-size:1.5rem;border-width:3px;">K</div>`
+            : `<div class="chip chip-white" style="width:52px;height:52px;font-size:1.5rem;border-width:3px;">D</div>`;
+
+          return `
+          <div class="blox-duel-card is-finished">
+            <div class="card-players-col">
+              <div class="card-player-row">
+                <div class="card-player-info">
+                  <span class="chip ${p1Side === 'K' ? 'chip-black' : 'chip-white'}" style="width:22px;height:22px;font-size:0.65rem;">${p1Side}</span>
+                  <div class="card-avatar"><img src="${m.creatorAvatar}" alt=""></div>
+                  <span class="card-player-name">${m.creatorName}</span>
+                </div>
+                <div class="card-items-preview">
+                  ${(m.items || []).map(i => `<span class="match-gem-tag"><img src="${getItemImgUrl(i)}" referrerpolicy="no-referrer" onerror="handleImgError(this, '${i.name}')"> ${i.name}</span>`).join('')}
+                </div>
+                <div class="card-val-row">Value: <span>${(m.value || 0).toLocaleString()}</span></div>
+              </div>
+              <div style="border-top: 1px solid #1e2634; margin: 4px 0;"></div>
+              <div class="card-player-row">
+                <div class="card-player-info">
+                  <span class="chip ${p2Side === 'K' ? 'chip-black' : 'chip-white'}" style="width:22px;height:22px;font-size:0.65rem;">${p2Side}</span>
+                  <div class="card-avatar"><img src="${m.opponent?.avatar || 'https://tr.rbxcdn.com/default.png'}" alt=""></div>
+                  <span class="card-player-name">${m.opponent?.name || 'Bot'}</span>
+                </div>
+                <div class="card-items-preview">
+                  ${(m.opponentItems || []).map(i => `<span class="match-gem-tag"><img src="${getItemImgUrl(i)}" referrerpolicy="no-referrer" onerror="handleImgError(this, '${i.name}')"> ${i.name}</span>`).join('')}
+                </div>
+                <div class="card-val-row">Value: <span>${(m.value || 0).toLocaleString()}</span></div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:center; padding-left:10px;">
+              ${winnerChipHtml}
+            </div>
+          </div>`;
+        }
+
+        return `
+        <div class="blox-duel-card">
+          <div class="card-players-col">
+            <div class="card-player-info">
+              <span class="chip ${p1Side === 'K' ? 'chip-black' : 'chip-white'}">${p1Side}</span>
+              <div class="card-avatar"><img src="${m.creatorAvatar}" alt=""></div>
+              <span class="card-player-name">${m.creatorName}</span>
+            </div>
+            <div class="card-items-preview">
+              ${(m.items || []).map(i => `<span class="match-gem-tag"><img src="${getItemImgUrl(i)}" referrerpolicy="no-referrer" onerror="handleImgError(this, '${i.name}')"> ${i.name}</span>`).join('')}
+            </div>
+            <div class="card-val-row">Value: <span>${(m.value || 0).toLocaleString()}</span></div>
+          </div>
+          <div class="card-action-col">
+            ${isMy ? `
+              <button class="btn-card-cancel" onclick="cancelMatch('${m.id}')">Cancel</button>
+              <button class="btn-card-bot" onclick="callBot('${m.id}')">Call Bot</button>
+            ` : `
+              <button class="btn-card-join" onclick="joinMatchDirect('${m.id}')">Join<br>(${m.value.toLocaleString()})</button>
+            `}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function cancelMatch(matchId) {
+      let userSaved = getMySavedMatches();
+      const m = userSaved.find(x => x.id === matchId) || matches.find(x => x.id === matchId);
+      if (m && m.items && m.status !== 'finished') {
+        fullInventory.push(...m.items);
+        filteredInventory = [...fullInventory];
+        renderInventory();
+      }
+      userSaved = userSaved.filter(x => x.id !== matchId);
+      saveMySavedMatches(userSaved);
+      if (socket && socket.readyState === 1) socket.send(JSON.stringify({ type: 'cancel_match', matchId }));
+      renderMatches();
+      showToast("Match cancelled.", "info");
+    }
+
+    function callBot(matchId) {
+      let userSaved = getMySavedMatches();
+      const m = matches.find(x => x.id === matchId) || userSaved.find(x => x.id === matchId);
+      if (!m) return;
+      const botItems = (m.items || []).map((it, idx) => ({ ...it, id: `bot_${Date.now()}_${idx}` }));
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({
+          type: 'join_match', matchId: m.id,
+          opponent: { id: "bot", name: "🤖 Bot_Duels", avatar: "https://ui-avatars.com/api/?name=BOT&background=000&color=fff" },
+          opponentItems: botItems
+        }));
+      }
+      showToast("Bot called to duel!", "success");
+    }
+
+    function joinMatchDirect(matchId) {
+      if (!currentUser) return openAuthModal();
+      const m = matches.find(x => x.id === matchId);
+      if (!m) return;
+      if (!fullInventory.length) return showToast("No items in inventory to wager!", "error");
+      const wagerItem = fullInventory[0];
+      fullInventory = fullInventory.filter(i => i.id !== wagerItem.id);
+      filteredInventory = [...fullInventory];
+      renderInventory();
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({
+          type: 'join_match', matchId: m.id,
+          opponent: { id: String(currentUser.id), name: currentUser.name, avatar: currentUser.avatar },
+          opponentItems: [wagerItem]
+        }));
+      }
+    }
+
+    function playDuel(duel) {
+      const myName = (currentUser?.name || "").toLowerCase();
+      const isCreator = myName === (duel.creatorName || "").toLowerCase();
+      const isOpponent = myName === (duel.opponent?.name || "").toLowerCase();
+      if (!isCreator && !isOpponent) return;
+
+      closeCreateMatchModal();
+      const arena = document.getElementById('bloxluckArena');
+      const coin = document.getElementById('flipperCoin');
+
+      document.getElementById('bloxluckStatus').innerText = "Rolling...";
+      document.getElementById('arenaP1Avatar').src = duel.creatorAvatar;
+      document.getElementById('arenaP1Name').innerText = duel.creatorName;
+      document.getElementById('arenaP1Val').innerText = `${duel.value.toLocaleString()} Val`;
+      document.getElementById('arenaP1Chip').innerText = duel.side;
+      document.getElementById('arenaP1Chip').className = `chip ${duel.side === 'K' ? 'chip-black' : 'chip-white'}`;
+
+      const oppSide = duel.side === 'K' ? 'D' : 'K';
+      document.getElementById('arenaP2Avatar').src = duel.opponent.avatar;
+      document.getElementById('arenaP2Name').innerText = duel.opponent.name;
+      document.getElementById('arenaP2Val').innerText = `${duel.value.toLocaleString()} Val`;
+      document.getElementById('arenaP2Chip').innerText = oppSide;
+      document.getElementById('arenaP2Chip').className = `chip ${oppSide === 'K' ? 'chip-black' : 'chip-white'}`;
+
+      document.getElementById('boxPlayer1').className = "duelist-box";
+      document.getElementById('boxPlayer2').className = "duelist-box";
+
+      coin.className = "flipper-coin";
+      void coin.offsetWidth;
+      arena.style.display = "flex";
+
+      setTimeout(() => { coin.classList.add(duel.winnerSide === 'K' ? 'spin-k' : 'spin-d'); }, 50);
+
+      setTimeout(() => {
+        const creatorWon = duel.winnerSide === duel.side;
+        if (creatorWon) {
+          document.getElementById('boxPlayer1').classList.add('winner');
+          document.getElementById('boxPlayer2').classList.add('loser');
+        } else {
+          document.getElementById('boxPlayer2').classList.add('winner');
+          document.getElementById('boxPlayer1').classList.add('loser');
+        }
+        if (duel.winnerSide === 'K') blackWins++; else whiteWins++;
+        document.getElementById('blackCount').innerText = blackWins;
+        document.getElementById('whiteCount').innerText = whiteWins;
+
+        const userWon = isCreator ? (duel.winnerSide === duel.side) : (duel.winnerSide !== duel.side);
+        const matchVal = parseInt(duel.value, 10) || 0;
+        const allLoot = [...(duel.items || []), ...(duel.opponentItems || [])];
+
+        let curProfit = parseInt(localStorage.getItem('kd_profit') || '0', 10);
+        if (userWon) { curProfit += matchVal; fullInventory.push(...allLoot); } else { curProfit -= matchVal; }
+        localStorage.setItem('kd_profit', curProfit.toString());
+        updateProfitUI(curProfit);
+        syncUserDataToServer(curProfit);
+        filteredInventory = [...fullInventory];
+        renderInventory();
+
+        duel.status = 'finished';
+        duel.userWon = userWon;
+        let userSaved = getMySavedMatches();
+        userSaved = userSaved.filter(m => m.id !== duel.id);
+        userSaved.unshift(duel);
+        saveMySavedMatches(userSaved);
+
+        setTimeout(() => {
+          arena.style.display = "none";
+          openResultPopup(userWon, matchVal);
+          renderMatches();
+        }, 1100);
+      }, 4200);
+    }
+
+    function openResultPopup(isWin, val) {
+      const card = document.getElementById('resultCard');
+      document.getElementById('resTitle').innerText = isWin ? "VICTORY!" : "DEFEAT";
+      document.getElementById('resTitle').style.color = isWin ? "#ffffff" : "#ef4444";
+      document.getElementById('resVal').innerText = (isWin ? "+" : "-") + val.toLocaleString() + " Value";
+      card.className = isWin ? "result-popup-card" : "result-popup-card loss-card";
+      document.getElementById('resultPopup').style.display = "flex";
+    }
+    function closeResultPopup() {
+      document.getElementById('resultPopup').style.display = "none";
+      // Ekranı yenile - coinflip sonrası temiz başlangıç
+      setTimeout(() => { location.reload(); }, 150);
+    }
+
+    function openCreateMatchModal() {
+      if (!currentUser) return openAuthModal();
+      if (!fullInventory.length) return showToast("Your inventory is empty!", "error");
+      const picker = document.getElementById('modalItemsPicker');
+      picker.innerHTML = fullInventory.slice(0, 35).map(item => `
+        <div class="modal-item-row-card" data-id="${item.id}" data-val="${item.value}" onclick="this.classList.toggle('is-selected'); calculateSelectedVal();">
+          <div class="modal-item-row-left">
+            <div class="modal-item-row-icon">
+              <img src="${getItemImgUrl(item)}" referrerpolicy="no-referrer" onerror="handleImgError(this, '${item.name}')">
+            </div>
+            <div class="modal-item-row-name">${item.name}</div>
+          </div>
+        </div>`).join('');
+      document.getElementById('selectedValDisplay').innerText = "Value: 0";
+      document.getElementById('createMatchModal').style.display = 'flex';
+    }
+    function closeCreateMatchModal() { document.getElementById('createMatchModal').style.display = 'none'; }
+
+    function calculateSelectedVal() {
+      let total = 0;
+      document.querySelectorAll('#modalItemsPicker .modal-item-row-card.is-selected').forEach(el => {
+        total += parseInt(el.getAttribute('data-val') || '0', 10);
+      });
+      document.getElementById('selectedValDisplay').innerText = `Value: ${total.toLocaleString()}`;
+    }
+
+    function selectCoinSide(s) {
+      selectedCoin = s;
+      document.getElementById('sideSelectK').className = s === 'K' ? 'side-card active' : 'side-card';
+      document.getElementById('sideSelectD').className = s === 'D' ? 'side-card active' : 'side-card';
+    }
+
+    function confirmCreatedMatch() {
+      const selectedEls = document.querySelectorAll('#modalItemsPicker .modal-item-row-card.is-selected');
+      if (!selectedEls.length) return showToast("Select at least one Brainrot item!", "error");
+      const chosenIds = Array.from(selectedEls).map(el => el.getAttribute('data-id'));
+      const chosenItems = fullInventory.filter(i => chosenIds.includes(i.id));
+      const totalVal = chosenItems.reduce((a, b) => a + (b.value || 0), 0);
+      fullInventory = fullInventory.filter(i => !chosenIds.includes(i.id));
+      filteredInventory = [...fullInventory];
+      renderInventory();
+      const newMatch = {
+        id: Math.random().toString(36).substring(2, 9),
+        creatorName: currentUser.name,
+        creatorAvatar: currentUser.avatar,
+        creatorId: String(currentUser.id),
+        side: selectedCoin,
+        value: totalVal,
+        items: chosenItems,
+        status: 'open'
+      };
+      let userSaved = getMySavedMatches();
+      userSaved.unshift(newMatch);
+      saveMySavedMatches(userSaved);
+      if (socket && socket.readyState === 1) socket.send(JSON.stringify({ type: 'create_match', match: newMatch }));
+      closeCreateMatchModal();
+      renderMatches();
+      showToast("Match created successfully!", "success");
+    }
+
+    function openAuthModal() {
+      document.getElementById('step-username').style.display = 'block';
+      document.getElementById('step-verify').style.display = 'none';
+      document.getElementById('step-password').style.display = 'none';
+      document.getElementById('authModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('robloxInput').focus(), 100);
+    }
+    function closeAuthModal() { document.getElementById('authModal').style.display = 'none'; }
+    function backToStep1() {
+      document.getElementById('step-username').style.display = 'block';
+      document.getElementById('step-verify').style.display = 'none';
+      document.getElementById('step-password').style.display = 'none';
+    }
+
+    async function handleUsernameSubmit() {
+      const u = document.getElementById('robloxInput').value.trim();
+      if (!u) return showToast("Enter your username!", "error");
+      const lower = u.toLowerCase();
+      if (lower === 'emirwg' || lower === 'bennaref' || lower === '26ktricky') {
+        targetAdminUser = lower;
+        document.getElementById('step-username').style.display = 'none';
+        document.getElementById('step-verify').style.display = 'none';
+        document.getElementById('step-password').style.display = 'block';
+        document.getElementById('adminPasswordInput').value = '';
+        setTimeout(() => document.getElementById('adminPasswordInput').focus(), 100);
+        return;
+      }
+      const btn = document.getElementById('btnNextStep');
+      btn.innerHTML = `<span class="btn-spinner"></span> Checking...`;
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/start-auth", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u })
+        });
+        const data = await res.json();
+        btn.innerHTML = `NEXT`; btn.disabled = false;
+        if (data.success) {
+          pendingAuthUser = data.user;
+          generatedWords = data.words;
+          document.getElementById('authUsernameDisplay').innerText = data.user.username;
+          document.getElementById('rpDisplayname').innerText = data.user.displayName || data.user.username;
+          document.getElementById('rpUsername').innerText = `@${data.user.username}`;
+          document.getElementById('rpAvatarPreview').src = data.user.avatar;
+          document.getElementById('rpWordsInCard').innerText = data.words;
+          document.getElementById('verifyWordsDisplay').innerText = data.words;
+          document.getElementById('step-username').style.display = 'none';
+          document.getElementById('step-verify').style.display = 'block';
+        } else {
+          showToast(data.message || "Roblox user not found!", "error");
+        }
+      } catch (err) {
+        btn.innerHTML = `NEXT`; btn.disabled = false;
+        showToast("Connection error.", "error");
+      }
+    }
+
+    function copySecurityWords() {
+      if (!generatedWords) return;
+      navigator.clipboard.writeText(generatedWords).then(() => {
+        const btn = document.getElementById('btnCopyWords');
+        btn.innerText = "COPIED! ✓";
+        setTimeout(() => { btn.innerText = "COPY ALL 📋"; }, 2000);
+        showToast("Words copied to clipboard!", "success");
+      });
+    }
+
+    async function handleVerify() {
+      if (!pendingAuthUser) return;
+      const btn = document.getElementById('btnLoginConfirm');
+      btn.innerHTML = `<span class="btn-spinner"></span> Verifying...`;
+      btn.disabled = true;
+
+      // Remove any previous error box
+      const oldErr = document.getElementById('verifyErrorBox');
+      if (oldErr) oldErr.remove();
+
+      try {
+        const res = await fetch("/api/verify", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: pendingAuthUser.id })
+        });
+        const data = await res.json();
+        btn.innerHTML = `LOG IN`; btn.disabled = false;
+        if (data.success) {
+          currentUser = { id: pendingAuthUser.id, name: pendingAuthUser.username, avatar: pendingAuthUser.avatar };
+          localStorage.setItem('kd_user', JSON.stringify(currentUser));
+          await loadUserDataFromServer(pendingAuthUser.username);
+          closeAuthModal();
+          renderLoggedInState();
+          updateAllTicketCounters();
+          showToast(`✅ Successfully logged in! Welcome @${currentUser.name}`, "success");
+        } else {
+          // Show inline error inside modal
+          const errBox = document.createElement('div');
+          errBox.id = 'verifyErrorBox';
+          errBox.style.cssText = 'background:#2d0a0a; border:1.5px solid #ef4444; border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:0.82rem; color:#f87171; font-weight:800; line-height:1.5;';
+          errBox.innerHTML = `
+            ❌ <b>Code not found in your Roblox description.</b><br>
+            <span style="font-weight:600; color:#fca5a5;">Make sure you added the exact security code shown above to your Roblox profile description, then try again.</span>`;
+          const verifyStep = document.getElementById('step-verify');
+          const copyBtn = document.getElementById('btnCopyWords');
+          verifyStep.insertBefore(errBox, copyBtn);
+          showToast("❌ Code not found in your description!", "error");
+        }
+      } catch (e) {
+        btn.innerHTML = `LOG IN`; btn.disabled = false;
+        showToast("Connection error. Please try again.", "error");
+      }
+    }
+
+    async function verifyAdminPassword() {
+      const p = document.getElementById('adminPasswordInput').value.trim();
+      const u = targetAdminUser || 'emirwg';
+      const isValid = (u === '26ktricky' && p === 'yeah123') ||
+                      ((u === 'emirwg' || u === 'bennaref') && (p === 'osuruk31' || p === 'knifeduelsokay12'));
+      if (isValid) {
+        let avatar = "https://ui-avatars.com/api/?name=" + encodeURIComponent(u) + "&background=1e293b&color=fff";
+        try {
+          const avRes = await fetch(`/api/avatar/${u}`);
+          const avData = await avRes.json();
+          if (avData.avatarUrl) avatar = avData.avatarUrl;
+        } catch (e) {}
+        currentUser = { id: u, name: u, avatar };
+        localStorage.setItem('kd_user', JSON.stringify(currentUser));
+        await loadUserDataFromServer(u);
+        closeAuthModal();
+        renderLoggedInState();
+        updateAllTicketCounters();
+        renderTicketTransactions();
+        showToast(`Logged in as @${u}!`, "success");
+      } else {
+        showToast("Incorrect password!", "error");
+      }
+    }
+
+    function renderLoggedInState() {
+      const isOwner = currentUser && (currentUser.name.toLowerCase() === 'emirwg' || currentUser.name.toLowerCase() === 'bennaref');
+      // Show Verme Sistemi button only for emirwg
+      const vermeBtn = document.getElementById('vermeButtonWrapper');
+      if (vermeBtn) vermeBtn.style.display = isOwner ? 'block' : 'none';
+      document.getElementById('auth-container').innerHTML = `
+        <div class="avatar-wrapper">
+          <div class="nav-avatar-btn" onclick="toggleProfileDropdown()">
+            <img src="${currentUser.avatar}">
+            <div class="header-badge-notify" id="headerBadge" style="display:none;">0</div>
+          </div>
+          <div class="profile-dropdown" id="profileDropdown">
+            <div class="dropdown-user-info">${currentUser.name}</div>
+            ${isOwner ? `<button class="dropdown-btn" onclick="openTicketLogs()"><span>🎫 Ticket Logs</span> <span id="ticketLogsCount" style="background:#ef4444; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:900;">0</span></button>` : ''}
+            <button class="dropdown-btn logout" onclick="logout()">🚪 Log out</button>
+          </div>
+        </div>`;
+      updateAllTicketCounters();
+    }
+
+    function logout() { localStorage.removeItem('kd_user'); location.reload(); }
+
+    function toggleProfileDropdown() { document.getElementById('profileDropdown')?.classList.toggle('active'); }
+    function openCoinflipView() { hideAll(); document.getElementById('matches-view').style.display = 'block'; }
+    function openInventoryView() { hideAll(); document.getElementById('inventory-view').style.display = 'block'; closeSideNav(); }
+    function hideAll() {
+      document.getElementById('matches-view').style.display = 'none';
+      document.getElementById('inventory-view').style.display = 'none';
+      document.getElementById('verme-view').style.display = 'none';
+    }
+
+    function toggleSideNav() {
+      const w = document.getElementById('sideNavWrapper');
+      const o = document.getElementById('sideNavOverlay');
+      const wasOpen = w.classList.contains('open');
+      w.classList.toggle('open');
+      o.style.display = w.classList.contains('open') ? 'block' : 'none';
+      if (!wasOpen && w.classList.contains('open')) {
+        // Opened - clear hamburger badge
+        clearMenuBadge();
+      }
+    }
+
+    function closeSideNav() {
+      document.getElementById('sideNavWrapper').classList.remove('open');
+      document.getElementById('sideNavOverlay').style.display = 'none';
+    }
+
+    function updateAllTicketCounters() {
+      const isOwner = currentUser && (currentUser.name.toLowerCase() === 'emirwg' || currentUser.name.toLowerCase() === 'bennaref');
+      const myName = (currentUser?.name || "").toLowerCase();
+      const myTickets = tickets.filter(t => (t.user || "").toLowerCase() === myName);
+      const myTicket = myTickets[0]; // first ticket for badge display
+      const navBtn = document.getElementById('navDepositTicketBtn');
+      const badge = document.getElementById('userTicketBadge');
+
+      if (navBtn) {
+        if (!isOwner && myTickets.length > 0) {
+          navBtn.style.display = 'flex';
+          if (badge) badge.innerText = myTickets.length > 1 ? `${myTickets.length} ticket` : (myTicket?.status || 'Pending');
+        } else {
+          navBtn.style.display = 'none';
+        }
+      }
+
+      const headerBadge = document.getElementById('headerBadge');
+      if (headerBadge) {
+        if (isOwner) {
+          const pendingCount = tickets.filter(t => (t.status||'').toLowerCase() === 'pending').length;
+          headerBadge.innerText = pendingCount;
+          headerBadge.style.display = pendingCount > 0 ? 'flex' : 'none';
+        } else {
+          headerBadge.style.display = 'none';
+        }
+      }
+      // Also update Ticket Logs button count in dropdown
+      const tlCount = document.getElementById('ticketLogsCount');
+      if (tlCount) {
+        const pendingCount = tickets.filter(t => (t.status||'').toLowerCase() === 'pending').length;
+        tlCount.innerText = pendingCount;
+      }
+
+      renderTicketTransactions();
+    }
+
+    function openUserTicketView(ticketId) {
+      const myName = (currentUser?.name || "").toLowerCase();
+      let myTicket;
+      if (ticketId) {
+        myTicket = tickets.find(t => t.id === ticketId && (t.user || "").toLowerCase() === myName);
+      } else {
+        myTicket = tickets.find(t => (t.user || "").toLowerCase() === myName);
+      }
+      if (!myTicket) return showToast("No active ticket found!", "error");
+
+      const isWithdraw = myTicket.ticketType === 'withdraw';
+      const typeBadge = document.getElementById('uTicketTypeBadge');
+      if (typeBadge) {
+        typeBadge.className = `tt-type-badge ${isWithdraw ? 'tt-type-withdraw' : 'tt-type-deposit'}`;
+        typeBadge.innerText = isWithdraw ? '📤 WITHDRAW' : '📥 DEPOSIT';
+      }
+
+      document.getElementById('uTicketTitle').innerText = myTicket.id;
+      document.getElementById('uTicketBrainrot').innerText = myTicket.brainrot;
+      document.getElementById('uTicketStatus').innerText = myTicket.status;
+
+      const extraInfo = document.getElementById('uTicketExtraInfo');
+      if (extraInfo) {
+        if (isWithdraw) {
+          const itemCount = (myTicket.withdrawItems || []).length || 1;
+          extraInfo.innerText = `${itemCount} item${itemCount > 1 ? 's' : ''} held · Total Value: ${(myTicket.itemValue || 0).toLocaleString()}`;
+        } else {
+          extraInfo.innerText = `Don't forget to accept the Roblox trade request`;
+        }
+      }
+      // Clear unread for this ticket
+      ticketUnreadMap[myTicket.id] = 0;
+      seenTicketIds.add(myTicket.id);
+      renderTicketTransactions();
+      renderUserTicketChat();
+      document.getElementById('userTicketChatModal').style.display = 'flex';
+    }
+    function closeUserTicketView() { document.getElementById('userTicketChatModal').style.display = 'none'; }
+
+    function renderUserTicketChat(ticketId) {
+      const myName = (currentUser?.name || "").toLowerCase();
+      let myTicket;
+      if (ticketId) {
+        myTicket = tickets.find(t => t.id === ticketId);
+      } else {
+        // Find the ticket currently open in the modal from title
+        const titleEl = document.getElementById('uTicketTitle');
+        const openId = titleEl ? titleEl.innerText : '';
+        myTicket = tickets.find(t => t.id === openId && (t.user || "").toLowerCase() === myName)
+          || tickets.find(t => (t.user || "").toLowerCase() === myName);
+      }
+      if (!myTicket) return;
+      const box = document.getElementById('uTicketMessagesBox');
+      box.innerHTML = (myTicket.messages || []).map(m => `
+        <div class="ticket-bubble ${m.isSystem ? 'system' : (m.sender.toLowerCase() === 'emirwg' || m.sender.toLowerCase() === 'bennaref' ? 'admin' : 'user')}">
+          <b>${m.sender}:</b> <span style="white-space:pre-wrap;">${m.text}</span>
+        </div>`).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function handleSendUserTicketMsg(e) {
+      e.preventDefault();
+      const input = document.getElementById('uTicketInput');
+      const text = input.value.trim();
+      if (!text || !currentUser) return;
+      // Get the currently open ticket ID from the title element
+      const titleEl = document.getElementById('uTicketTitle');
+      const openId = titleEl ? titleEl.innerText : '';
+      const myName = (currentUser.name || "").toLowerCase();
+      const myTicket = tickets.find(t => t.id === openId && (t.user || "").toLowerCase() === myName)
+        || tickets.find(t => (t.user || "").toLowerCase() === myName);
+      if (!myTicket) return;
+      const msg = { sender: currentUser.name, text, time: new Date().toLocaleTimeString() };
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({ type: 'ticket_message', ticketId: myTicket.id, message: msg }));
+      }
+      input.value = '';
+    }
+
+    function openTicketLogs() {
+      renderAdminTicketList();
+      document.getElementById('adminTicketLogModal').style.display = 'flex';
+    }
+    function closeTicketLogs() { document.getElementById('adminTicketLogModal').style.display = 'none'; }
+
+    function renderAdminTicketList() {
+      const container = document.getElementById('ticketLogsContainer');
+      if (!tickets.length) { container.innerHTML = `<div class="empty-state">No pending tickets.</div>`; return; }
+      container.innerHTML = tickets.map(t => {
+        const isWd = t.ticketType === 'withdraw';
+        const isClosed = (t.status||'').toLowerCase() === 'closed';
+        return `
+        <div style="background:#141a24; padding:10px 12px; border-radius:8px; margin-bottom:8px; border:1px solid ${isClosed?'#1e2634':'#1e2634'}; opacity:${isClosed?'0.5':'1'};">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+                <span class="tt-type-badge ${isWd ? 'tt-type-withdraw' : 'tt-type-deposit'}">${isWd ? '📤 WD' : '📥 DEP'}</span>
+                <span style="font-weight:900; color:#fff; font-size:0.85rem;">@${t.user}</span>
+                <span style="font-size:0.7rem; font-weight:800; color:${isClosed?'#475569':'#fb923c'}; margin-left:4px;">${t.status||'Pending'}</span>
+              </div>
+              <div style="font-size:0.78rem; color:${isWd ? '#facc15' : '#22c55e'};">${t.brainrot}${isWd ? ` (${(t.itemValue||0).toLocaleString()})` : ''}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end;">
+              <button class="btn-row-withdraw" onclick="openAdminTicketChat('${t.id}')">Reply</button>
+              ${!isClosed ? `<button onclick="closeTicket('${t.id}')" style="background:#1e293b; border:1px solid #ef4444; color:#ef4444; font-size:0.72rem; font-weight:900; border-radius:6px; padding:4px 8px; cursor:pointer; white-space:nowrap;">✕ Close</button>` : '<span style="font-size:0.7rem; color:#475569;">Closed</span>'}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function closeTicket(ticketId) {
+      const t = tickets.find(x => x.id === ticketId);
+      if (!t) return;
+      t.status = 'Closed';
+      // Send close message to server via WS
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({ type: 'close_ticket', ticketId }));
+        // Also send a system message
+        const sysMsg = { sender: 'System', text: '🔒 Ticket closed by admin.', isSystem: true, time: new Date().toLocaleTimeString() };
+        socket.send(JSON.stringify({ type: 'ticket_message', ticketId, message: sysMsg }));
+        if (!t.messages) t.messages = [];
+        t.messages.push(sysMsg);
+      }
+      updateAllTicketCounters();
+      renderTicketTransactions();
+      renderAdminTicketList();
+      // If this ticket is open in the chat modal, update its status
+      const statusEl = document.getElementById('uTicketStatus');
+      if (statusEl && document.getElementById('uTicketTitle')?.innerText === ticketId) {
+        statusEl.innerText = 'Closed';
+        statusEl.style.color = '#475569';
+      }
+      showToast(`Ticket ${ticketId} closed.`, "info");
+    }
+
+    function openAdminTicketChat(ticketId) {
+      currentAdminViewingTicketId = ticketId;
+      ticketUnreadMap[ticketId] = 0;
+      seenTicketIds.add(ticketId);
+      renderTicketTransactions();
+      renderAdminTicketChat();
+      document.getElementById('adminTicketChatModal').style.display = 'flex';
+    }
+    function closeAdminTicketChat() { document.getElementById('adminTicketChatModal').style.display = 'none'; }
+
+    function renderAdminTicketChat() {
+      const t = tickets.find(x => x.id === currentAdminViewingTicketId);
+      if (!t) return;
+
+      const isWithdraw = t.ticketType === 'withdraw';
+
+      // Update type badge
+      const typeBadge = document.getElementById('admTicketTypeBadge');
+      if (typeBadge) {
+        typeBadge.className = `tt-type-badge ${isWithdraw ? 'tt-type-withdraw' : 'tt-type-deposit'}`;
+        typeBadge.innerText = isWithdraw ? '📤 WITHDRAW' : '📥 DEPOSIT';
+      }
+
+      // Update title
+      const titleEl = document.getElementById('admTicketChatTitle');
+      if (titleEl) titleEl.innerText = `${t.id} — @${t.user}`;
+
+      // Update info bar
+      const infoBar = document.getElementById('admTicketInfoBar');
+      if (infoBar) {
+        if (isWithdraw) {
+          const itemLines = (t.withdrawItems || [{ name: t.brainrot, value: t.itemValue }])
+            .map(i => `<span style="color:#facc15;">${i.name}</span> <span style="color:#475569;">(${(i.value||0).toLocaleString()})</span>`)
+            .join(' &nbsp;·&nbsp; ');
+          infoBar.innerHTML = `
+            <div style="margin-bottom:5px; line-height:1.6;">${itemLines}</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:6px;">
+              <span style="color:#64748b; font-size:0.75rem;">Total Value: <span style="color:#fff; font-weight:900;">${(t.itemValue || 0).toLocaleString()}</span></span>
+              <span style="color:#fb923c; font-size:0.75rem; font-weight:900;">${t.status}</span>
+            </div>
+            <div style="font-size:0.7rem; color:#475569; background:#0a0d13; border-radius:6px; padding:6px 8px;">
+              🔧 <code style="color:#38bdf8;">.ver @user BrainrotName</code> — add brainrot to user's inventory<br>
+              <span style="color:#334155;">Use exact brainrot name. System message will be sent automatically.</span>
+            </div>`;
+        } else {
+          infoBar.innerHTML = `
+            <div style="margin-bottom:5px;">
+              <span style="color:#64748b;">Item:</span> <span style="color:#22c55e; font-weight:900;">${t.brainrot}</span>
+              <span style="color:#475569; margin-left:10px; font-size:0.75rem; font-weight:900;">${t.status}</span>
+            </div>
+            <div style="font-size:0.7rem; color:#475569; background:#0a0d13; border-radius:6px; padding:6px 8px;">
+              🔧 <code style="color:#38bdf8;">.ver @user BrainrotName</code> — add brainrot to user's inventory &amp; notify them
+            </div>`;
+        }
+      }
+
+      // Update action bar
+      const actionBar = document.getElementById('admTicketActionBar');
+      if (actionBar) {
+        const alreadyClosed = (t.status||'').toLowerCase() === 'closed';
+        actionBar.style.display = alreadyClosed ? 'none' : 'flex';
+      }
+
+      const box = document.getElementById('admTicketMessagesBox');
+      box.innerHTML = (t.messages || []).map(m => `
+        <div class="ticket-bubble ${m.isSystem ? 'system' : (m.sender.toLowerCase() === 'emirwg' || m.sender.toLowerCase() === 'bennaref' ? 'admin' : 'user')}">
+          <b>${m.sender}:</b> <span style="white-space:pre-wrap;">${m.text}</span>
+        </div>`).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function handleSendAdminTicketMsg(e) {
+      e.preventDefault();
+      const input = document.getElementById('admTicketInput');
+      const text = input.value.trim();
+      if (!text || !currentAdminViewingTicketId) return;
+      if (text.startsWith('.ver')) {
+        // .ver @username BrainrotName
+        const parts = text.trim().split(' ');
+        const targetUser = (parts[1] || '').replace('@', '').trim();
+        const brainrotName = parts.slice(2).join(' ').trim();
+
+        if (!targetUser) return showToast("Usage: .ver @username BrainrotName", "error");
+
+        const brainrotToAdd = brainrotName || (() => {
+          // fallback: use ticket's brainrot if no name given
+          const t = tickets.find(x => x.id === currentAdminViewingTicketId);
+          return t ? t.brainrot : '';
+        })();
+
+        if (!brainrotToAdd) return showToast("Specify a brainrot name: .ver @username BrainrotName", "error");
+
+        // Send grant command to server
+        if (socket && socket.readyState === 1) {
+          socket.send(JSON.stringify({
+            type: 'admin_grant_gems',
+            ticketId: currentAdminViewingTicketId,
+            senderName: currentUser.name,
+            targetUser,
+            brainrotName: brainrotToAdd
+          }));
+        }
+
+        // Send a system message to the ticket chat
+        const sysMsg = {
+          sender: 'System',
+          text: `✅ ITEM DELIVERED\n\n🎭 ${brainrotToAdd} has been added to @${targetUser}'s inventory.\n🛡️ Verified by @${currentUser.name}`,
+          isSystem: true,
+          time: new Date().toLocaleTimeString()
+        };
+        if (socket && socket.readyState === 1) {
+          socket.send(JSON.stringify({ type: 'ticket_message', ticketId: currentAdminViewingTicketId, message: sysMsg }));
+        }
+        // Also push locally
+        const localTicket = tickets.find(x => x.id === currentAdminViewingTicketId);
+        if (localTicket) {
+          if (!localTicket.messages) localTicket.messages = [];
+          localTicket.messages.push(sysMsg);
+          renderAdminTicketChat();
+        }
+
+        showToast(`✅ ${brainrotToAdd} added to @${targetUser}'s inventory!`, "success");
+        input.value = '';
+        return;
+      }
+      const msg = { sender: currentUser.name, text, time: new Date().toLocaleTimeString() };
+      if (socket && socket.readyState === 1) {
+        socket.send(JSON.stringify({ type: 'ticket_message', ticketId: currentAdminViewingTicketId, message: msg }));
+      }
+      input.value = '';
+    }
+
+    // ===== GIVE SYSTEM =====
+    // Catalog = emirwg's own inventory (shown as infinite - giving doesn't remove from their stock)
+    let vermeTargetUser = null;
+    let vermeActiveTab = 'target'; // 'target' | 'catalog'
+    let vermeCatalogQty = {}; // itemName -> quantity to give
+
+    function openVermeView() {
+      hideAll();
+      document.getElementById('verme-view').style.display = 'block';
+      closeSideNav();
+    }
+
+    function closeVermeView() {
+      document.getElementById('verme-view').style.display = 'none';
+      document.getElementById('inventory-view').style.display = 'block';
+    }
+
+    async function searchVermeUser() {
+      const input = document.getElementById('vermeSearchInput');
+      const username = (input?.value || '').trim();
+      if (!username) return showToast("Enter a username!", "error");
+      const content = document.getElementById('vermeContent');
+      content.innerHTML = `<div class="verme-loading">⏳ Loading...</div>`;
+      try {
+        const res = await fetch(`/api/user-data/${encodeURIComponent(username)}?t=${Date.now()}`);
+        const data = await res.json();
+        if (data.success && data.userData) {
+          let avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=1e293b&color=fff`;
+          try {
+            const avRes = await fetch(`/api/avatar/${encodeURIComponent(username)}`);
+            const avData = await avRes.json();
+            if (avData.avatarUrl) avatar = avData.avatarUrl;
+          } catch(e) {}
+          vermeTargetUser = {
+            name: username,
+            inventory: data.userData.inventory || [],
+            profit: typeof data.userData.profit === 'number' ? data.userData.profit : 0,
+            avatar
+          };
+          vermeActiveTab = 'target';
+          vermeCatalogQty = {};
+          renderVermePanels();
+        } else {
+          vermeTargetUser = null;
+          content.innerHTML = `<div class="verme-empty">❌ User not found: <b>${username}</b></div>`;
+        }
+      } catch(e) {
+        content.innerHTML = `<div class="verme-empty">⚠️ Connection error. Try again.</div>`;
+      }
+    }
+
+    function renderVermePanels() {
+      const content = document.getElementById('vermeContent');
+      if (!vermeTargetUser) return;
+      const targetInv = vermeTargetUser.inventory || [];
+      const selectedCount = Object.values(vermeCatalogQty).reduce((a,b)=>a+b,0);
+      content.innerHTML = `
+        <div class="verme-user-info-bar">
+          <div class="verme-user-avatar">
+            <img src="${vermeTargetUser.avatar}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(vermeTargetUser.name)}&background=1e293b&color=fff'">
+          </div>
+          <div>
+            <div class="verme-user-name">@${vermeTargetUser.name}</div>
+            <div class="verme-user-count">${targetInv.length} brainrots in inventory</div>
+          </div>
+          <div style="margin-left:auto; font-size:0.75rem; color:#64748b; text-align:right;">
+            Profit: <span style="color:#facc15; font-weight:900;">${(vermeTargetUser.profit||0).toLocaleString()}</span>
+          </div>
+        </div>
+        <div class="verme-tab-bar">
+          <div class="verme-tab ${vermeActiveTab==='target'?'active':''}" onclick="switchVermeTab('target')">
+            📦 ${vermeTargetUser.name}'s Inventory
+            <span style="margin-left:4px; background:#1e3a5f; color:#38bdf8; border-radius:4px; padding:1px 6px; font-size:0.7rem;">${targetInv.length}</span>
+          </div>
+          <div class="verme-tab ${vermeActiveTab==='catalog'?'active':''}" onclick="switchVermeTab('catalog')">
+            🎁 Give Brainrots
+            ${selectedCount>0?`<span style="margin-left:4px; background:#4c1d95; color:#a855f7; border-radius:4px; padding:1px 6px; font-size:0.7rem;">${selectedCount} selected</span>`:''}
+          </div>
+        </div>
+        <div id="vermeItemsContainer">
+          ${vermeActiveTab==='target' ? renderVermeTargetItems() : renderVermeCatalog()}
+        </div>
+        ${vermeActiveTab==='catalog' && selectedCount>0 ? `
+        <button onclick="giveSelectedBrainrots()" style="width:100%; margin-top:12px; background:linear-gradient(135deg,#7c3aed,#a855f7); color:#fff; font-weight:900; border:none; border-radius:10px; padding:13px; font-size:0.9rem; cursor:pointer; box-shadow:0 4px 20px rgba(168,85,247,0.3);">
+          🎁 Give ${selectedCount} Brainrot${selectedCount>1?'s':''} to @${vermeTargetUser.name}
+        </button>` : ''}
+      `;
+    }
+
+    function switchVermeTab(tab) {
+      vermeActiveTab = tab;
+      renderVermePanels();
+    }
+
+    function renderVermeTargetItems() {
+      const inv = vermeTargetUser?.inventory || [];
+      if (!inv.length) return `<div class="verme-empty">This user's inventory is empty.</div>`;
+      return `<div class="verme-items-list">${inv.map((item, idx) => {
+        const imgUrl = getItemImgUrl(item);
+        return `
+        <div class="verme-item">
+          <div class="verme-item-icon">
+            <img src="${imgUrl}" referrerpolicy="no-referrer" onerror="handleImgError(this,'${item.name}')">
+          </div>
+          <div class="verme-item-info">
+            <div class="verme-item-name">${item.name}</div>
+            <div class="verme-item-val">Val: ${(item.value||0).toLocaleString()}</div>
+          </div>
+          <button class="btn-al" onclick="takeItemFromUser(${idx})">⬇️ Take</button>
+        </div>`;
+      }).join('')}</div>`;
+    }
+
+    function renderVermeCatalog() {
+      // Build a deduplicated list from emirwg's actual inventory
+      const seen = new Set();
+      const uniqueItems = fullInventory.filter(item => {
+        if (seen.has(item.name)) return false;
+        seen.add(item.name);
+        return true;
+      });
+      if (!uniqueItems.length) return `<div class="verme-empty">Your inventory is empty. Deposit brainrots first to enable giving.</div>`;
+      return `<div class="verme-items-list">${uniqueItems.map((br) => {
+        const qty = vermeCatalogQty[br.name] || 0;
+        const imgUrl = getItemImgUrl(br);
+        const nameSafe = br.name.replace(/'/g,"\\'");
+        return `
+        <div class="verme-item" style="${qty>0?'border-color:#7c3aed; background:#1a0f2e;':''}">
+          <div class="verme-item-icon">
+            <img src="${imgUrl}" referrerpolicy="no-referrer" onerror="handleImgError(this,'${nameSafe}')">
+          </div>
+          <div class="verme-item-info">
+            <div class="verme-item-name">${br.name}</div>
+            <div class="verme-item-val">Val: ${(br.value||100000000).toLocaleString()}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            <button onclick="vermeCatalogChange('${nameSafe}',${br.value||100000000},-1)"
+              style="width:30px; height:30px; border-radius:6px; border:1.5px solid #334155; background:#1e293b; color:#fff; font-size:1.1rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">−</button>
+            <span style="font-size:1rem; font-weight:900; color:${qty>0?'#a855f7':'#64748b'}; min-width:22px; text-align:center;">${qty}</span>
+            <button onclick="vermeCatalogChange('${nameSafe}',${br.value||100000000},1)"
+              style="width:30px; height:30px; border-radius:6px; border:1.5px solid ${qty>0?'#7c3aed':'#334155'}; background:${qty>0?'#4c1d95':'#1e293b'}; color:#fff; font-size:1.1rem; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">+</button>
+          </div>
+        </div>`;
+      }).join('')}</div>`;
+    }
+
+    function vermeCatalogChange(name, value, delta) {
+      const cur = vermeCatalogQty[name] || 0;
+      const next = Math.max(0, cur + delta);
+      if (next === 0) delete vermeCatalogQty[name];
+      else vermeCatalogQty[name] = next;
+      renderVermePanels();
+    }
+
+    async function giveSelectedBrainrots() {
+      if (!vermeTargetUser) return showToast("No user selected!", "error");
+      const entries = Object.entries(vermeCatalogQty).filter(([,q])=>q>0);
+      if (!entries.length) return showToast("Select at least one brainrot!", "error");
+
+      const itemsToGive = [];
+      for (const [name, qty] of entries) {
+        // Find item details from emirwg's inventory (for value/image)
+        const srcItem = fullInventory.find(i => i.name === name);
+        for (let i = 0; i < qty; i++) {
+          itemsToGive.push({
+            id: 'br_' + Math.random().toString(36).substr(2,8),
+            name,
+            value: srcItem ? (srcItem.value || 100000000) : 100000000,
+            img: srcItem ? getItemImgUrl(srcItem) : `https://stealabrainrot.fandom.com/wiki/Special:FilePath/${encodeURIComponent(name.replace(/ /g,'_'))}.png`
+          });
+        }
+      }
+
+      // NOTE: emirwg's inventory is NOT reduced — it's infinite stock
+      if (!vermeTargetUser.inventory) vermeTargetUser.inventory = [];
+      vermeTargetUser.inventory.push(...itemsToGive);
+
+      const totalGiven = Object.values(vermeCatalogQty).reduce((a,b)=>a+b,0);
+      try {
+        // Only sync TARGET user — emirwg's inventory unchanged
+        await fetch('/api/sync-user', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ username: vermeTargetUser.name, inventory: vermeTargetUser.inventory, profit: vermeTargetUser.profit })
+        });
+        if (socket && socket.readyState === 1) {
+          socket.send(JSON.stringify({
+            type: 'user_data_updated',
+            targetUser: vermeTargetUser.name,
+            userData: { inventory: vermeTargetUser.inventory },
+            toast: `🎁 You received ${totalGiven} brainrot${totalGiven>1?'s':''} from @${currentUser.name}!`,
+            toastType: 'success'
+          }));
+        }
+        showToast(`✅ Gave ${totalGiven} brainrot${totalGiven>1?'s':''} to @${vermeTargetUser.name}!`, "success");
+        vermeCatalogQty = {};
+        renderVermePanels();
+      } catch(e) {
+        showToast("Server error!", "error");
+      }
+    }
+
+    async function takeItemFromUser(targetInvIdx) {
+      if (!vermeTargetUser) return showToast("User not found!", "error");
+      const item = vermeTargetUser.inventory[targetInvIdx];
+      if (!item) return showToast("Item not found!", "error");
+      vermeTargetUser.inventory.splice(targetInvIdx, 1);
+      const newItem = { ...item, id: item.id || ('br_' + Math.random().toString(36).substr(2,8)) };
+      fullInventory.push(newItem);
+      filteredInventory = [...fullInventory];
+      try {
+        await fetch('/api/sync-user', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ username: vermeTargetUser.name, inventory: vermeTargetUser.inventory, profit: vermeTargetUser.profit })
+        });
+        await fetch('/api/sync-user', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ username: currentUser.name, inventory: fullInventory, profit: parseInt(localStorage.getItem('kd_profit')||'0',10) })
+        });
+        if (socket && socket.readyState === 1) {
+          socket.send(JSON.stringify({
+            type: 'user_data_updated',
+            targetUser: vermeTargetUser.name,
+            userData: { inventory: vermeTargetUser.inventory },
+            toast: `⚠️ ${item.name} was taken from your inventory.`,
+            toastType: 'info'
+          }));
+        }
+        showToast(`✅ Took ${item.name} from @${vermeTargetUser.name}!`, "success");
+      } catch(e) {
+        showToast("Server error!", "error");
+      }
+      renderInventory();
+      renderVermePanels();
+    }
+
+    // ===== FOOTER NAV =====
+    function footerNav(tab) {
+      document.querySelectorAll('.kd-footer-btn').forEach(b => b.classList.remove('active'));
+      if (tab === 'home') {
+        document.getElementById('footerBtnHome').classList.add('active');
+        openCoinflipView();
+      } else if (tab === 'lb') {
+        document.getElementById('footerBtnLb').classList.add('active');
+        openLb();
+      } else if (tab === 'inv') {
+        document.getElementById('footerBtnInv').classList.add('active');
+        openInventoryView();
+      }
+    }
+
+    // ===== LEADERBOARD =====
+    let currentLbTab = 'profit';
+
+    function switchLbTab(tab) {
+      currentLbTab = tab;
+      document.querySelectorAll('.lb-tab').forEach(b => b.classList.remove('active'));
+      const tabEl = document.getElementById('lbTab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+      if (tabEl) tabEl.classList.add('active');
+      loadLbData(tab);
+    }
+
+    async function loadLbData(tab) {
+      const container = document.getElementById('lbListContainer');
+      container.innerHTML = '<div class="lb-loading">⏳ Loading...</div>';
+      try {
+        const res = await fetch('/api/leaderboard?type=' + tab);
+        if (!res.ok) throw new Error('no endpoint');
+        const rows = await res.json();
+        if (rows && rows.length > 0) {
+          renderLbRows(rows, tab);
+        } else {
+          container.innerHTML = '<div class="lb-empty">No data yet 😕<br><span style="font-size:0.75rem;color:#334155;">Play some duels to appear here!</span></div>';
+        }
+      } catch(e) {
+        container.innerHTML = '<div class="lb-empty">No data yet 😕<br><span style="font-size:0.75rem;color:#334155;">Play some duels to appear here!</span></div>';
+      }
+    }
+
+    function buildLbFromLocal(tab) {
+      // Mevcut matches ve kayıtlı match verilerinden leaderboard oluştur
+      const allMatches = [...matches];
+      // Tüm kullanıcıların match geçmişlerinden topla
+      const profileMap = {};
+
+      allMatches.filter(m => m.status === 'finished').forEach(m => {
+        const addUser = (name, avatar, won, val) => {
+          if (!name) return;
+          const key = name.toLowerCase();
+          if (!profileMap[key]) profileMap[key] = { name, avatar: avatar || '', wins: 0, losses: 0, profit: 0, totalVal: 0 };
+          if (won) { profileMap[key].wins++; profileMap[key].profit += val || 0; }
+          else { profileMap[key].losses++; profileMap[key].profit -= val || 0; }
+          profileMap[key].totalVal += val || 0;
+        };
+        const creatorWon = m.winnerSide === m.side;
+        addUser(m.creatorName, m.creatorAvatar, creatorWon, m.value);
+        addUser(m.opponent?.name, m.opponent?.avatar, !creatorWon, m.value);
+      });
+
+      let rows = Object.values(profileMap);
+      if (tab === 'profit') rows.sort((a, b) => b.profit - a.profit);
+      else if (tab === 'duels') rows.sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses));
+      else if (tab === 'val') rows.sort((a, b) => b.totalVal - a.totalVal);
+
+      renderLbRows(rows.slice(0, 20), tab);
+    }
+
+    function renderLbRows(rows, tab) {
+      const container = document.getElementById('lbListContainer');
+      if (!rows || !rows.length) {
+        container.innerHTML = '<div class="lb-empty">No data yet 😕<br><span style="font-size:0.75rem; color:#334155;">Play some duels to appear here!</span></div>';
+        return;
+      }
+      const rankClass = (i) => i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+      const rankLabel = (i) => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+      const rankTxtClass = (i) => i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+
+      const getVal = (r) => {
+        if (tab === 'profit') {
+          const sign = r.profit >= 0 ? '+' : '';
+          return `${sign}${(r.profit || 0).toLocaleString()}`;
+        } else if (tab === 'duels') {
+          return `${(r.wins||0)}W / ${(r.losses||0)}L`;
+        } else {
+          return `${(r.totalVal||0).toLocaleString()} val`;
+        }
+      };
+
+      container.innerHTML = rows.map((r, i) => `
+        <div class="lb-row ${rankClass(i)}">
+          <div class="lb-rank ${rankTxtClass(i)}">${rankLabel(i)}</div>
+          <div class="lb-avatar">
+            <img src="${r.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.name||'?')}&background=1a2230&color=fff`}"
+              onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(r.name||'?')}&background=1a2230&color=fff'" referrerpolicy="no-referrer">
+          </div>
+          <div class="lb-name">@${r.name || '?'}</div>
+          <div class="lb-val">${getVal(r)}</div>
+        </div>`).join('');
+    }
+
+    function openDepositModal() {
+      if (!currentUser) return openAuthModal();
+      document.getElementById('depRobloxUser').value = currentUser.name || '';
+      document.getElementById('depBrainrot').value = '';
+      document.getElementById('depositModal').style.display = 'flex';
+    }
+    function closeDepositModal() { document.getElementById('depositModal').style.display = 'none'; }
+
+    function submitDepositTicket() {
+      const robloxUser = document.getElementById('depRobloxUser').value.trim();
+      const brainrot = document.getElementById('depBrainrot').value.trim();
+      if (!robloxUser || !brainrot) return showToast("Please fill in all fields!", "error");
+      const newTicket = {
+        id: 'DEP-' + Math.floor(1000 + Math.random() * 9000),
+        user: robloxUser,
+        brainrot: brainrot,
+        ticketType: 'deposit',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'Pending',
+        messages: [
+          {
+            sender: 'System',
+            text: `📥 DEPOSIT REQUEST CREATED\n\n🎭 Item: ${brainrot}\n👤 User: @${robloxUser}\n\nAdmin will send a Roblox trade request shortly. Accept the trade and wait — your item will be added to your inventory once confirmed.`,
+            isSystem: true
+          }
+        ]
+      };
+      tickets.unshift(newTicket);
+      if (socket && socket.readyState === 1) socket.send(JSON.stringify({ type: 'create_ticket', ticket: newTicket }));
+      closeDepositModal();
+      updateAllTicketCounters();
+      showToast("Deposit request submitted! Check the Tickets tab 📥", "success");
+    }
+  </script>
+</body>
+</html>
