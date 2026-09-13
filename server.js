@@ -1,10 +1,10 @@
-// server.js
+// server.js - KnifeDuels Backend
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { WebSocketServer } = require('ws');
+const WebSocketServer = require('ws');
 
 const app = express();
 app.use(cors());
@@ -22,15 +22,6 @@ const BRAINROTS_FILE = path.join(__dirname, 'brainrots.json');
 const GIVEAWAY_FILE = path.join(__dirname, 'giveaway.json');
 const HTML_FILE = path.join(__dirname, 'KnifeDuels.html');
 
-// Reset matches.json and users.json immediately on startup to clear old states and inventories
-try {
-  fs.writeFileSync(MATCHES_FILE, JSON.stringify([], null, 2));
-} catch (e) {}
-
-try {
-  fs.writeFileSync(USERS_FILE, JSON.stringify({}, null, 2));
-} catch (e) {}
-
 function loadFile(file, def = []) {
   try {
     if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -44,97 +35,135 @@ function saveFile(file, data) {
   } catch (e) {}
 }
 
-const AUTO_PATCH_CODE = `
-<style id="kd-leaderboard-fix">
-  .lb-row {
-    display: grid !important;
-    grid-template-columns: 28px 44px 1fr !important;
-    grid-template-rows: auto auto !important;
-    align-items: center !important;
-    column-gap: 12px !important;
-    row-gap: 2px !important;
-    padding: 10px 14px !important;
-  }
-  .lb-rank {
-    grid-column: 1 !important;
-    grid-row: 1 / span 2 !important;
-    width: 100% !important;
-    text-align: center !important;
-    font-size: 1.15rem !important;
-  }
-  .lb-avatar {
-    grid-column: 2 !important;
-    grid-row: 1 / span 2 !important;
-    width: 44px !important;
-    height: 44px !important;
-    border-radius: 50% !important;
-    overflow: hidden !important;
-  }
-  .lb-avatar img {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-  }
-  .lb-name {
-    grid-column: 3 !important;
-    grid-row: 1 !important;
-    font-size: 0.95rem !important;
-    font-weight: 900 !important;
-    color: #ffffff !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    line-height: 1.2 !important;
-    text-align: left !important;
-  }
-  .lb-val {
-    grid-column: 3 !important;
-    grid-row: 2 !important;
-    font-size: 0.8rem !important;
-    font-weight: 800 !important;
-    color: #facc15 !important;
-    text-align: left !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important;
-  }
-</style>
-<script id="kd-popup-cleanup-script">
-  (function() {
-    try { localStorage.removeItem('kd_gw_winner'); } catch(e) {}
-    document.addEventListener('DOMContentLoaded', function() {
-      localStorage.removeItem('kd_gw_winner');
-      var m = document.getElementById('gwWinnerModal');
-      if (m) m.style.display = 'none';
-    });
-    window.closeGwWinnerModal = function() {
-      var m = document.getElementById('gwWinnerModal');
-      if (m) m.style.display = 'none';
-      try { localStorage.removeItem('kd_gw_winner'); } catch(e) {}
-    };
-  })();
-</script>
-`;
-
-function servePatchedHtml(req, res) {
-  try {
-    let html = fs.readFileSync(HTML_FILE, 'utf8');
-    if (!html.includes('id="kd-popup-cleanup-script"')) {
-      if (html.includes('</head>')) {
-        html = html.replace('</head>', `${AUTO_PATCH_CODE}\n</head>`);
-      } else {
-        html = AUTO_PATCH_CODE + html;
-      }
-    }
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(html);
-  } catch (err) {
-    res.sendFile(HTML_FILE);
-  }
-}
-
-app.get('/', servePatchedHtml);
-app.get('/KnifeDuels.html', servePatchedHtml);
-app.use(express.static(path.join(__dirname)));
+const BRAINROT_VALUES = {
+  "1x1x1x1": 1000,
+  "25": 1000,
+  "67": 500,
+  "89": 1000,
+  "Abyssaloco": 15000,
+  "Agarrini la Palini": 5000,
+  "Antonio": 700000,
+  "Aquarino": 250000,
+  "Arcadragon": 250000,
+  "Bacuru and Egguru": 2000,
+  "Bananito": 1000,
+  "Baskito": 1000,
+  "Bearito Cabinito": 5000,
+  "Boppin Bunny": 65000,
+  "Bumbatron": 10000,
+  "Bunny and Eggy": 130000,
+  "Burguro and Fryuro": 70000,
+  "Camera Ramena": 5000,
+  "Cangurato Gelato": 25000,
+  "Capitano Americano": 10000,
+  "Capitano Moby": 70000,
+  "Cash or Card": 45000,
+  "Caylusaurus": 12000,
+  "Celularcini Viciosini": 30000,
+  "Cerberus": 80000,
+  "Chillin Chili": 10000,
+  "Chipso and Queso": 10000,
+  "Cloverat Clapat": 75000,
+  "Coco and Mango": 8000,
+  "Cooki and Milki": 130000,
+  "Dragon Aquanini": 1200000,
+  "Dragon Cannelloni": 1000000,
+  "Dragon Gingerini": 1200000,
+  "Dug dug dug": 300000,
+  "Duggy Bros": 350000,
+  "Elefanto Frigo": 3000000,
+  "Eviledon": 5000,
+  "Festive 67": 150000,
+  "Fishino Clownino": 200000,
+  "Fortunu and Cashuru": 250000,
+  "Foxini Lanternini": 250000,
+  "Fragola La La La": 150000,
+  "Fragrama and Chocrama": 150000,
+  "Garama and Madundung": 50000,
+  "Ginger Gerat": 850000,
+  "Globa Steppa": 350000,
+  "Gobblino Uniciclino": 10000,
+  "Gold Gold Gold": 5000,
+  "Griffin": 1300000,
+  "Guest 666": 10000,
+  "Gym Bros": 15000,
+  "Honey Honey Bear": 10000,
+  "Honey Honey Narwhal": 10000,
+  "Hopilikalika Hopilikalako": 50000,
+  "Hydra Bunny": 600000,
+  "Hydra Dragon Cannelloni": 1100000,
+  "Jelly Moby": 450000,
+  "Jolly Jolly Sahur": 100000,
+  "Kalika Bros": 250000,
+  "Ketchuru and Musturu": 25000,
+  "Ketupat Bros": 500000,
+  "Ketupat Kepat": 8000,
+  "Kraken": 1500000,
+  "La Anniversary Grande": 10000,
+  "La Breakfast Combinasion": 376000,
+  "La Casa Boo": 300000,
+  "La Craft Machine": 250000,
+  "La Extinct Grande": 8000,
+  "La Food Combinasion": 300000,
+  "La Fuse Machine": 250000,
+  "La Ginger Sekolah": 25000,
+  "La Grande Combinasion": 2000,
+  "La Jolly Grande": 3000,
+  "La Lucky Grande": 3000,
+  "La Romantic Grande": 3000,
+  "La Secret Combinasion": 75000,
+  "La Spooky Grande": 3000,
+  "La Summer Grande": 4000,
+  "La Supreme Combinasion": 1200000,
+  "La Taco Combinasion": 13500,
+  "Las Sis": 10000,
+  "Lavadorito Spinito": 7000,
+  "Los Admins": 130000,
+  "Los Amigos": 100000,
+  "Los Bros": 8500,
+  "Los Chillis": 75000,
+  "Los Cupids": 7000,
+  "Los Fruits": 4000,
+  "Los Hackers": 100000,
+  "Los Hotspotsitos": 20000,
+  "Los Jolly Combinasionas": 10000,
+  "Los Mariachis": 8000,
+  "Los Planitos": 8000,
+  "Los Primos": 12000,
+  "Los Puggies": 6000,
+  "Los Secret Combinasionas": 100000,
+  "Los Sekolahs": 150000,
+  "Los Spaghettis": 25000,
+  "Los Tacoritas": 5000,
+  "Los Tangcitos": 5000,
+  "Los Tictacs": 7000,
+  "Love Love Bear": 500000,
+  "Lovin Rose": 25000,
+  "Mariachi Corazoni": 3000,
+  "Mieteteira Bicicleteira": 2000,
+  "Moby Bros": 150000,
+  "Money Money Bros": 27500,
+  "Money Money Puggy": 3000,
+  "Money Money Reindeer": 7000,
+  "Nacho Spyder": 7000,
+  "Nachorilla": 10000,
+  "Noodle Noodle Poodle": 1500,
+  "Orcaledon": 10000,
+  "Pancake and Syrup": 150000,
+  "Pizza and Ranch": 200000,
+  "Popcuru and Fizzuru": 120000,
+  "Reinito Sleighito": 220000,
+  "Rosetti Tualetti": 18000,
+  "Rubiko and Kubiko": 100000,
+  "Rubrikiko": 80000,
+  "S'more Serat": 150000,
+  "Sammyni Cakini": 150000,
+  "Sammyni Fattini": 70000,
+  "Sammyni Truckini": 90000,
+  "Steakini Fattini": 150000,
+  "Spaghetti Tualetti": 1000,
+  "Spooky and Pumpky": 100000
+};
 
 const ALL_SECRET_NAMES = [
   "Griffin", "Dragon Aquanini", "Dragon Gingerini", "Hydra Dragon Cannelloni", "Signore Carapace",
@@ -199,179 +228,20 @@ const ALL_SECRET_NAMES = [
   "Chachechi", "Blackhole Goat", "Dul Dul Dul", "Torrtuginni Dragonfrutini", "Trenostruzzo Turbo 4000",
   "La Vacca Saturno Saturnita", "Bisonte Giuppitere", "Karkerkar Kurkur", "Los Matteos",
   "Sammyni Spyderini", "Jackorilla", "Leprotteo", "Luck Luck Sahur", "Tung Tung Tung Sahur",
-  "Headless Horseman", "Wheelchair Granny", "Wombo Rollo"
+  "Headless Horseman", "Wheelchair Granny", "Wombo Rollo", "Panda Popanda", "Deputy Leopard",
+  "Los Dragons", "Gold and Diamond", "Chicli Chicla", "89", "Tax Tax Tax Sahur"
 ];
 
-// =====================================================================
-// BRAINROT DEGER TABLOSU — Güncellenmiş Değerler (Bulunmayanlar 0 döner)
-// =====================================================================
-const BRAINROT_VALUE_MAP = {
-  '1x1x1x1': 1000,
-  '1x1x1x1x': 1000,
-  '25': 1000,
-  '67': 500,
-  '89': 1000,
-  'Abyssaloco': 15000,
-  'Agarrini la Palini': 5000,
-  'Antonio': 700000,
-  'Aquarino': 250000,
-  'Arcadragon': 250000,
-  'Bacuru and Egguru': 2000,
-  'Bananito': 1000,
-  'Baskito': 1000,
-  'Bearito Cabinito': 5000,
-  'Boppin Bunny': 65000,
-  'Bumbatron': 10000,
-  'Bunny and Eggy': 130000,
-  'Bunny And Eggy': 130000,
-  'Burguro and Fryuro': 70000,
-  'Burguro And Fryro': 70000,
-  'Camera Ramena': 5000,
-  'Cangurato Gelato': 25000,
-  'Capitano Americano': 10000,
-  'Capitano Moby': 70000,
-  'Cash or Card': 45000,
-  'Cash Or Card': 45000,
-  'Caylusaurus': 12000,
-  'Caylusarus': 12000,
-  'Celularcini Viciosini': 30000,
-  'Cerberus': 80000,
-  'Chillin Chili': 10000,
-  'Chipso and Queso': 10000,
-  'Chipso And Queso': 10000,
-  'Cloverat Clapat': 75000,
-  'Coco and Mango': 8000,
-  'Coco And Mango': 8000,
-  'Cooki and Milki': 130000,
-  'Cooki And Milkie': 130000,
-  'Dragon Aquanini': 1200000,
-  'Dragon Cannelloni': 1000000,
-  'Dragon Canelloni': 1000000,
-  'Dragon Cannellloni': 1000000,
-  'Dragon Gingerini': 1200000,
-  'Dug dug dug': 300000,
-  'Dug Dug Dug': 300000,
-  'Duggy Bros': 350000,
-  'Elefanto Frigo': 3000000,
-  'Eviledon': 5000,
-  'Eviladon': 5000,
-  'Festive 67': 150000,
-  'Fishino Clownino': 200000,
-  'Fortunu and Cashuru': 250000,
-  'Fortunu And Cashuru': 250000,
-  'Foxini Lanternini': 250000,
-  'Foxini Lanterini': 250000,
-  'Fragola La La La': 150000,
-  'Froga La La La': 150000,
-  'Fragrama and Chocrama': 150000,
-  'Garama and Madundung': 50000,
-  'Ginger Gerat': 850000,
-  'Globa Steppa': 350000,
-  'Gobblino Uniciclino': 10000,
-  'Gold Gold Gold': 5000,
-  'Griffin': 1300000,
-  'Guest 666': 10000,
-  'Gym Bros': 15000,
-  'Honey Honey Bear': 10000,
-  'Honey Honey Narwhal': 100,
-  'Hopilikalika Hopilikalako': 50000,
-  'Hydra Bunny': 600000,
-  'Hydra Dragon Cannelloni': 1100000,
-  'Hydra Dragon Canelloni': 1100000,
-  'Jelly Moby': 450000,
-  'Jolly Jolly Sahur': 100000,
-  'Kalika Bros': 250000,
-  'Ketchuru and Musturu': 25000,
-  'Ketupat Bros': 500000,
-  'Ketupat Kepat': 8000,
-  'Kraken': 1500000,
-  'La Anniversary Grande': 10000,
-  'La Breakfast Combinasion': 376000,
-  'La Casa Boo': 300000,
-  'La Craft Machine': 250000,
-  'La Extinct Grande': 8000,
-  'La Excint Grande': 8000,
-  'La Food Combinasion': 300000,
-  'La Fuse Machine': 250000,
-  'La Ginger Sekolah': 25000,
-  'La Grande': 2000,
-  'La Jolly Grande': 3000,
-  'La Lucky Grande': 3000,
-  'La Romantic Grande': 3000,
-  'La Secret Combinasion': 75000,
-  'La Spooky Grande': 3000,
-  'La Summer Grande': 4000,
-  'La Supreme Combinasion': 1200000,
-  'La Taco Combinasion': 13500,
-  'Las Sis': 10000,
-  'Lavadorito Spinito': 7000,
-  'Los Admins': 130000,
-  'Los Amigos': 100000,
-  'Los Bros': 8500,
-  'Los Chillis': 75000,
-  'Los Cupids': 7000,
-  'Los Fruits': 4000,
-  'Los Hackers': 100000,
-  'Los Hotspotsitos': 20000,
-  'Los Jolly Combinasionas': 10000,
-  'Los Mariachis': 8000,
-  'Los Planitos': 8000,
-  'Los Primos': 12000,
-  'Los Puggies': 6000,
-  'Los Secret Combinasionas': 100000,
-  'Los Sekolahs': 150000,
-  'Los Spaghettis': 25000,
-  'Los Sphagettis': 25000,
-  'Los Tacoritas': 5000,
-  'Los Tangcitos': 5000,
-  'Los Tictacs': 7000,
-  'Love Love Bear': 500000,
-  'Lovin Rose': 25000,
-  'Mariachi Corazoni': 3000,
-  'Mieteteira Bicicleteira': 2000,
-  'Moby Bros': 150000,
-  'Money Money Bros': 27500,
-  'Money Money Puggy': 3000,
-  'Money Money Reindeer': 7000,
-  'Nacho Spyder': 7000,
-  'Nachorilla': 10000,
-  'Noodle Noodle Poodle': 1500,
-  'Orcaledon': 10000,
-  'Pancake and Syrup': 150000,
-  'Pizza and Ranch': 200000,
-  'Popcuru and Fizzuru': 120000,
-  'Reinito Sleighito': 220000,
-  'Rosetti Tualetti': 18000,
-  'Rubiko and Kubiko': 100000,
-  'Rubrikiko': 80000,
-  "S'more Serat": 150000,
-  'Sammyni Cakini': 150000,
-  'Sammyni Fattini': 70000,
-  'Sammyni Truckini': 90000,
-  'Steakini Fattini': 150000,
-  'Spaghetti Tualetti': 1000,
-  'Spooky and Pumpky': 100000
-};
-
-function getBrainrotValue(name) {
-  if (!name) return 0;
-  const clean = String(name).trim();
-  if (BRAINROT_VALUE_MAP.hasOwnProperty(clean)) return BRAINROT_VALUE_MAP[clean];
-  const lower = clean.toLowerCase();
-  for (const k of Object.keys(BRAINROT_VALUE_MAP)) {
-    if (k.toLowerCase() === lower) return BRAINROT_VALUE_MAP[k];
-  }
-  return 0;
-}
-
 const UNIQUE_SECRETS = Array.from(new Set(ALL_SECRET_NAMES)).map((name, idx) => {
-  const safeName = name.replace(/ /g, '_');
+  const safeName = name.replace(/ /g, "_");
   const imgUrl = `https://stealabrainrot.fandom.com/wiki/Special:FilePath/${encodeURIComponent(safeName)}.png`;
+  const cleanName = name.trim();
+  const val = BRAINROT_VALUES[cleanName] || 0;
   return {
     id: `sec_${idx + 1}`,
     name: name,
-    rarity: 'Secret',
-    value: getBrainrotValue(name),
+    rarity: "Secret",
+    value: val, // Değeri varsa kendi değeri, yoksa 0 (Not Value)
     img: imgUrl,
     image: imgUrl
   };
@@ -379,11 +249,22 @@ const UNIQUE_SECRETS = Array.from(new Set(ALL_SECRET_NAMES)).map((name, idx) => 
 
 saveFile(BRAINROTS_FILE, UNIQUE_SECRETS);
 
-let activeMatches = loadFile(MATCHES_FILE, []);
+// TÜM MAÇLARI VE ENVANTERLERİ SIFIRLAMA
+let activeMatches = []; // Maç geçmişi ve açık maçlar sıfırlandı
+saveFile(MATCHES_FILE, []);
+
 let activeTickets = loadFile(TICKETS_FILE, []);
 let usersDb = loadFile(USERS_FILE, {});
-let activeGiveaway = loadFile(GIVEAWAY_FILE, null);
 
+// Tüm kullanıcıların envanterlerini sıfırla
+for (const key of Object.keys(usersDb)) {
+  if (usersDb[key]) {
+    usersDb[key].inventory = [];
+  }
+}
+saveFile(USERS_FILE, usersDb);
+
+let activeGiveaway = loadFile(GIVEAWAY_FILE, null);
 if (activeGiveaway && (Date.now() >= (activeGiveaway.endTime || 0))) {
   activeGiveaway = null;
   saveFile(GIVEAWAY_FILE, null);
@@ -435,42 +316,10 @@ function getOrCreateUser(username) {
   const key = String(username || '').toLowerCase().replace('@', '').trim();
   if (!key) return null;
 
-  if (key === 'emirwg' || key === 'bennaref') {
-    if (!usersDb[key] || !usersDb[key].inventory || usersDb[key].inventory.length < 200) {
-      usersDb[key] = {
-        username: key,
-        inventory: JSON.parse(JSON.stringify(UNIQUE_SECRETS)),
-        depositLogs: usersDb[key]?.depositLogs || [],
-        withdrawLogs: usersDb[key]?.withdrawLogs || [],
-        profit: typeof usersDb[key]?.profit === 'number' ? usersDb[key].profit : 0,
-        wins: typeof usersDb[key]?.wins === 'number' ? usersDb[key].wins : 0,
-        losses: typeof usersDb[key]?.losses === 'number' ? usersDb[key].losses : 0
-      };
-      saveFile(USERS_FILE, usersDb);
-    }
-    return usersDb[key];
-  }
-
-  if (key === '26ktricky') {
-    if (!usersDb[key]) {
-      usersDb[key] = {
-        username: key,
-        inventory: [],
-        depositLogs: [],
-        withdrawLogs: [],
-        profit: 0,
-        wins: 0,
-        losses: 0
-      };
-      saveFile(USERS_FILE, usersDb);
-    }
-    return usersDb[key];
-  }
-
   if (!usersDb[key]) {
     usersDb[key] = {
       username: key,
-      inventory: [],
+      inventory: [], // TÜM KULLANICILAR BOŞ ENVANTERLE BAŞLAR
       depositLogs: [],
       withdrawLogs: [],
       profit: 0,
@@ -630,41 +479,6 @@ function broadcast(msgObj) {
 
 setInterval(() => { broadcast({ type: 'heartbeat' }); }, 5000);
 
-function checkGiveawayExpiry() {
-  if (activeGiveaway && Date.now() >= activeGiveaway.endTime) {
-    const users = activeGiveaway.joinedUsers || [];
-    let winner = null;
-
-    if (users.length > 0) {
-      winner = users[Math.floor(Math.random() * users.length)];
-      const winnerAcc = getOrCreateUser(winner);
-      if (winnerAcc) {
-        const wonItem = UNIQUE_SECRETS.find(s => s.name.toLowerCase() === activeGiveaway.itemName.toLowerCase()) || {
-          id: 'gw_' + Date.now(),
-          name: activeGiveaway.itemName,
-          value: activeGiveaway.itemVal || 0,
-          img: activeGiveaway.img
-        };
-        winnerAcc.inventory.push(wonItem);
-        saveFile(USERS_FILE, usersDb);
-
-        broadcast({
-          type: 'user_data_updated',
-          targetUser: winner,
-          userData: winnerAcc,
-          toast: `🎉 Tebrikler! Çekilişten ${activeGiveaway.itemName} kazandın!`,
-          toastType: 'success'
-        });
-      }
-    }
-
-    activeGiveaway = null;
-    saveFile(GIVEAWAY_FILE, null);
-    broadcast({ type: 'sync_giveaway', giveaway: null });
-  }
-}
-setInterval(checkGiveawayExpiry, 2000);
-
 wss.on('connection', (ws) => {
   onlineUsers++;
   broadcast({ type: 'online_count', count: onlineUsers });
@@ -674,11 +488,7 @@ wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'sync_chat', messages: chatMessages }));
 
   if (activeGiveaway) {
-    if (Date.now() >= activeGiveaway.endTime) {
-      checkGiveawayExpiry();
-    } else {
-      ws.send(JSON.stringify({ type: 'sync_giveaway', giveaway: activeGiveaway }));
-    }
+    ws.send(JSON.stringify({ type: 'sync_giveaway', giveaway: activeGiveaway }));
   }
 
   ws.on('message', (message) => {
@@ -721,27 +531,12 @@ wss.on('connection', (ws) => {
           broadcast({ type: 'sync_tickets', tickets: activeTickets });
         }
 
-      } else if (data.type === 'start_giveaway') {
-        activeGiveaway = data.giveaway;
-        saveFile(GIVEAWAY_FILE, activeGiveaway);
-        broadcast({ type: 'sync_giveaway', giveaway: activeGiveaway });
-
-      } else if (data.type === 'join_giveaway') {
-        if (activeGiveaway && Date.now() < activeGiveaway.endTime) {
-          const uname = String(data.username || '').toLowerCase();
-          if (!activeGiveaway.joinedUsers.includes(uname)) {
-            activeGiveaway.joinedUsers.push(uname);
-            saveFile(GIVEAWAY_FILE, activeGiveaway);
-            broadcast({ type: 'sync_giveaway', giveaway: activeGiveaway });
-          }
-        }
-
       } else if (data.type === 'admin_grant_gems') {
         const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
         if (!isOwner) return;
 
         const cleanUser = String(data.targetUser || '').replace('@', '').trim().toLowerCase();
-        let targetSecret = UNIQUE_SECRETS[Math.floor(Math.random() * UNIQUE_SECRETS.length)];
+        let targetSecret = UNIQUE_SECRETS[0];
         if (data.brainrotName) {
           const found = UNIQUE_SECRETS.find(s => s.name.toLowerCase() === data.brainrotName.toLowerCase());
           if (found) targetSecret = found;
@@ -764,33 +559,6 @@ wss.on('connection', (ws) => {
           logType: 'deposit',
           toast: `Admin credited ${qty > 1 ? qty + 'x ' : ''}${targetSecret.name} to your inventory!`,
           toastType: 'success'
-        });
-
-      } else if (data.type === 'admin_withdraw_gems') {
-        const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
-        if (!isOwner) return;
-
-        const cleanUser = String(data.targetUser || '').replace('@', '').trim().toLowerCase();
-        const targetAccount = getOrCreateUser(cleanUser);
-        let removedItemName = "Item";
-        if (targetAccount.inventory.length > 0) {
-          const removed = targetAccount.inventory.pop();
-          removedItemName = removed.name;
-        }
-        targetAccount.withdrawLogs.unshift({
-          time: new Date().toLocaleTimeString(),
-          amount: removedItemName,
-          text: `Withdrawal processed. ${removedItemName} deducted.`
-        });
-        saveFile(USERS_FILE, usersDb);
-
-        broadcast({
-          type: 'user_data_updated',
-          targetUser: cleanUser,
-          userData: targetAccount,
-          logType: 'withdraw',
-          toast: `⚠️ ${removedItemName} has been withdrawn from your inventory!`,
-          toastType: 'error'
         });
 
       } else if (data.type === 'create_match') {
@@ -818,8 +586,9 @@ wss.on('connection', (ws) => {
         if (matchIdx !== -1) {
           const match = activeMatches[matchIdx];
 
+          // Atomik kilit: Zaten katılmış veya oynanıyorsa anında reddet
           if (match.status === 'rolling' || match.status === 'finished' || match.opponent) {
-            ws.send(JSON.stringify({ type: 'join_rejected', matchId: data.matchId }));
+            ws.send(JSON.stringify({ type: 'join_rejected', matchId: data.matchId, message: 'Bu maça başka bir oyuncu katıldı!' }));
             return;
           }
 
@@ -853,9 +622,6 @@ wss.on('connection', (ws) => {
             }, 5000);
           }, 4300);
         }
-
-      } else if (data.type === 'user_data_updated') {
-        broadcast(data);
       }
     } catch (e) {}
   });
