@@ -479,6 +479,51 @@ function broadcast(msgObj) {
 
 setInterval(() => { broadcast({ type: 'heartbeat' }); }, 5000);
 
+function checkGiveawayExpiry() {
+  if (activeGiveaway && Date.now() >= activeGiveaway.endTime) {
+    const users = activeGiveaway.joinedUsers || [];
+    let winner = 'No participants';
+
+    if (users.length > 0) {
+      winner = users[Math.floor(Math.random() * users.length)];
+      const winnerAcc = getOrCreateUser(winner);
+      if (winnerAcc) {
+        const itemVal = BRAINROT_VALUES[activeGiveaway.itemName] || activeGiveaway.itemVal || 0;
+        const wonItem = {
+          id: 'gw_' + Date.now(),
+          name: activeGiveaway.itemName,
+          value: itemVal,
+          img: activeGiveaway.img
+        };
+        winnerAcc.inventory.push(wonItem);
+        saveFile(USERS_FILE, usersDb);
+
+        broadcast({
+          type: 'user_data_updated',
+          targetUser: winner,
+          userData: winnerAcc,
+          toast: `🎉 Tebrikler! Çekilişten ${activeGiveaway.itemName} kazandın!`,
+          toastType: 'success'
+        });
+      }
+    }
+
+    const endedData = {
+      winner: winner,
+      itemName: activeGiveaway.itemName,
+      itemVal: activeGiveaway.itemVal || BRAINROT_VALUES[activeGiveaway.itemName] || 0,
+      img: activeGiveaway.img
+    };
+
+    activeGiveaway = null;
+    saveFile(GIVEAWAY_FILE, null);
+    broadcast({ type: 'giveaway_ended', ...endedData });
+    broadcast({ type: 'sync_giveaway', giveaway: null });
+  }
+}
+setInterval(checkGiveawayExpiry, 2000);
+
+
 wss.on('connection', (ws) => {
   onlineUsers++;
   broadcast({ type: 'online_count', count: onlineUsers });
