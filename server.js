@@ -193,14 +193,143 @@ const ALL_SECRET_NAMES = [
   "Headless Horseman", "Wheelchair Granny", "Wombo Rollo"
 ];
 
+const VALUE_MAP = {
+  "1x1x1x1": 1000,
+  "25": 1000,
+  "67": 500,
+  "89": 1000,
+  "Abyssaloco": 15000,
+  "Agarrini la Palini": 5000,
+  "Antonio": 700000,
+  "Aquarino": 250000,
+  "Arcadragon": 250000,
+  "Bacuru and Egguru": 2000,
+  "Bananito": 1000,
+  "Baskito": 1000,
+  "Bearito Cabinito": 5000,
+  "Boppin Bunny": 65000,
+  "Bumbatron": 10000,
+  "Bunny and Eggy": 130000,
+  "Burguro and Fryuro": 70000,
+  "Camera Ramena": 5000,
+  "Cangurato Gelato": 25000,
+  "Capitano Americano": 10000,
+  "Capitano Moby": 70000,
+  "Cash or Card": 45000,
+  "Caylusaurus": 12000,
+  "Celularcini Viciosini": 30000,
+  "Cerberus": 80000,
+  "Chillin Chili": 10000,
+  "Chipso and Queso": 10000,
+  "Cloverat Clapat": 75000,
+  "Coco and Mango": 8000,
+  "Cooki and Milki": 130000,
+  "Dragon Aquanini": 1200000,
+  "Dragon Cannelloni": 1000000,
+  "Dragon Gingerini": 1200000,
+  "Dug dug dug": 300000,
+  "Duggy Bros": 350000,
+  "Elefanto Frigo": 3000000,
+  "Eviledon": 5000,
+  "Festive 67": 150000,
+  "Fishino Clownino": 200000,
+  "Fortunu and Cashuru": 250000,
+  "Foxini Lanternini": 250000,
+  "Fragola La La La": 150000,
+  "Fragrama and Chocrama": 150000,
+  "Garama and Madundung": 50000,
+  "Ginger Gerat": 850000,
+  "Globa Steppa": 350000,
+  "Gobblino Uniciclino": 10000,
+  "Gold Gold Gold": 5000,
+  "Griffin": 1300000,
+  "Guest 666": 10000,
+  "Gym Bros": 15000,
+  "Honey Honey Bear": 10000,
+  "Honey Honey Narwhal": 10000,
+  "Hopilikalika Hopilikalako": 50000,
+  "Hydra Bunny": 600000,
+  "Hydra Dragon Cannelloni": 1100000,
+  "Jelly Moby": 450000,
+  "Jolly Jolly Sahur": 100000,
+  "Kalika Bros": 250000,
+  "Ketchuru and Musturu": 25000,
+  "Ketupat Bros": 500000,
+  "Ketupat Kepat": 8000,
+  "Kraken": 1500000,
+  "La Anniversary Grande": 10000,
+  "La Breakfast Combinasion": 376000,
+  "La Casa Boo": 300000,
+  "La Fuse Machine": 250000,
+  "La Food Combinasion": 300000,
+  "La Ginger Sekolah": 25000,
+  "La Jolly Grande": 3000,
+  "La Lucky Grande": 3000,
+  "La Romantic Grande": 3000,
+  "La Secret Combinasion": 75000,
+  "La Spooky Grande": 3000,
+  "La Summer Grande": 4000,
+  "La Supreme Combinasion": 1200000,
+  "La Taco Combinasion": 13500,
+  "Las Sis": 10000,
+  "Lavadorito Spinito": 7000,
+  "Los Admins": 130000,
+  "Los Amigos": 100000,
+  "Los Bros": 8500,
+  "Los Chillis": 75000,
+  "Los Cupids": 7000,
+  "Los Fruits": 4000,
+  "Los Hackers": 100000,
+  "Los Hotspotsitos": 20000,
+  "Los Jolly Combinasionas": 10000,
+  "Los Mariachis": 8000,
+  "Los Planitos": 8000,
+  "Los Primos": 12000,
+  "Los Puggies": 6000,
+  "Los Secret Combinasionas": 100000,
+  "Los Sekolahs": 150000,
+  "Los Spaghettis": 25000,
+  "Los Tacoritas": 5000,
+  "Los Tangcitos": 5000,
+  "Los Tictacs": 7000,
+  "Love Love Bear": 500000,
+  "Lovin Rose": 25000,
+  "Mariachi Corazoni": 3000,
+  "Mieteteira Bicicleteira": 2000,
+  "Moby Bros": 150000,
+  "Money Money Bros": 27500,
+  "Money Money Puggy": 3000,
+  "Money Money Reindeer": 7000,
+  "Nacho Spyder": 7000,
+  "Nachorilla": 10000,
+  "Noodle Noodle Poodle": 1500,
+  "Orcaledon": 10000,
+  "Pancake and Syrup": 150000,
+  "Pizza and Ranch": 200000,
+  "Popcuru and Fizzuru": 120000,
+  "Reinito Sleighito": 220000,
+  "Rosetti Tualetti": 18000,
+  "Rubiko and Kubiko": 100000,
+  "Rubrikiko": 80000,
+  "S'more Serat": 150000,
+  "Sammyni Cakini": 150000,
+  "Sammyni Fattini": 70000,
+  "Sammyni Truckini": 90000,
+  "Steakini Fattini": 150000,
+  "Spaghetti Tualetti": 1000,
+  "Spooky and Pumpky": 100000
+};
+
 const UNIQUE_SECRETS = Array.from(new Set(ALL_SECRET_NAMES)).map((name, idx) => {
   const safeName = name.replace(/ /g, "_");
   const imgUrl = `https://stealabrainrot.fandom.com/wiki/Special:FilePath/${encodeURIComponent(safeName)}.png`;
+  const customValue = VALUE_MAP[name];
+  
   return {
     id: `sec_${idx + 1}`,
     name: name,
     rarity: "Secret",
-    value: (idx + 1) * 15000000 + 50000000,
+    value: customValue !== undefined ? customValue : "Not Value",
     img: imgUrl,
     image: imgUrl
   };
@@ -297,8 +426,6 @@ function getOrCreateUser(username) {
   }
 
   if (!usersDb[key]) {
-    // FIX: Yeni kullanıcılar boş inventory ile başlar
-    // Admin vermeden kimsenin item'i olmaz
     usersDb[key] = {
       username: key,
       inventory: [],
@@ -317,8 +444,6 @@ getOrCreateUser('emirwg');
 getOrCreateUser('bennaref');
 getOrCreateUser('26ktricky');
 
-// FIX: Mevcut users'dan emirwg/bennaref/26ktricky dışındakilerin otomatik verilen itemlerini sıfırla
-// Bu sadece bir kez çalışır (flag ile)
 (function cleanupAutoInventory() {
   const CLEANED_FLAG = path.join(__dirname, '.inventory_cleaned');
   if (fs.existsSync(CLEANED_FLAG)) return;
@@ -326,8 +451,6 @@ getOrCreateUser('26ktricky');
   let changed = false;
   for (const [key, user] of Object.entries(usersDb)) {
     if (PROTECTED.includes(key)) continue;
-    // Eğer inventory tamamen UNIQUE_SECRETS'tan geliyorsa (eski otomatik verilen) sıfırla
-    // Bunu anlamak için: inventory varsa ve tüm item id'leri sec_X formatındaysa sıfırla
     const inv = user.inventory || [];
     const allAutoGenerated = inv.length > 0 && inv.every(i => /^sec_\d+$/.test(i.id || ''));
     if (allAutoGenerated) {
@@ -365,7 +488,7 @@ app.get('/api/leaderboard', async (req, res) => {
     wins: typeof u.wins === 'number' ? u.wins : 0,
     losses: typeof u.losses === 'number' ? u.losses : 0,
     totalVal: Array.isArray(u.inventory)
-      ? u.inventory.reduce((s, i) => s + (i.value || 0), 0)
+      ? u.inventory.reduce((s, i) => s + (typeof i.value === 'number' ? i.value : 0), 0)
       : 0
   }));
 
@@ -655,10 +778,8 @@ wss.on('connection', (ws) => {
         broadcast({ type: 'match_created', match: data.match });
 
       } else if (data.type === 'cancel_match') {
-        // FIX: Maça biri join ettiyse veya rolling/finished ise cancel'ı reddet
         const matchToCancel = activeMatches.find(m => m.id === data.matchId);
         if (matchToCancel && (matchToCancel.opponent || matchToCancel.status === 'rolling' || matchToCancel.status === 'finished')) {
-          // Cancel reddedildi — client'a güncel maç bilgisini gönder ki UI sync olsun
           ws.send(JSON.stringify({
             type: 'cancel_rejected',
             matchId: data.matchId,
@@ -675,7 +796,6 @@ wss.on('connection', (ws) => {
         if (matchIdx !== -1) {
           const match = activeMatches[matchIdx];
 
-          // FIX: Maç zaten rolling/finished ise tekrar join ettirme
           if (match.status === 'rolling' || match.status === 'finished' || match.opponent) {
             ws.send(JSON.stringify({ type: 'join_rejected', matchId: data.matchId }));
             return;
@@ -692,8 +812,6 @@ wss.on('connection', (ws) => {
           match.winnerName = winnerName;
           saveFile(MATCHES_FILE, activeMatches);
 
-          // Tüm client'lara duel_started gönder — status: 'rolling' garantili
-          // Bu sayede creator'ın userSaved'ı güncellenir, Cancel butonu kaybolur
           broadcast({ type: 'duel_started', match: { ...match, status: 'rolling' } });
 
           setTimeout(() => {
