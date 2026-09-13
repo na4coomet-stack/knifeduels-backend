@@ -20,7 +20,7 @@ const TICKETS_FILE = path.join(__dirname, 'tickets.json');
 const USERS_FILE = path.join(__dirname, 'users.json');
 const BRAINROTS_FILE = path.join(__dirname, 'brainrots.json');
 const GIVEAWAY_FILE = path.join(__dirname, 'giveaway.json');
-const HTML_FILE = path.join(__dirname, 'KnifeDuels.html');
+const CHAT_FILE = path.join(__dirname, 'chat.json'); // FIX 3: Chat kalıcı kayıt
 
 function loadFile(file, def = []) {
   try {
@@ -235,13 +235,12 @@ const ALL_SECRET_NAMES = [
 const UNIQUE_SECRETS = Array.from(new Set(ALL_SECRET_NAMES)).map((name, idx) => {
   const safeName = name.replace(/ /g, "_");
   const imgUrl = `https://stealabrainrot.fandom.com/wiki/Special:FilePath/${encodeURIComponent(safeName)}.png`;
-  const cleanName = name.trim();
-  const val = BRAINROT_VALUES[cleanName] || 0;
+  const val = BRAINROT_VALUES[name.trim()] || 0;
   return {
     id: `sec_${idx + 1}`,
-    name: name,
+    name,
     rarity: "Secret",
-    value: val, // Değeri varsa kendi değeri, yoksa 0 (Not Value)
+    value: val,
     img: imgUrl,
     image: imgUrl
   };
@@ -249,20 +248,17 @@ const UNIQUE_SECRETS = Array.from(new Set(ALL_SECRET_NAMES)).map((name, idx) => 
 
 saveFile(BRAINROTS_FILE, UNIQUE_SECRETS);
 
-// TÜM MAÇLARI VE ENVANTERLERİ SIFIRLAMA
-let activeMatches = []; // Maç geçmişi ve açık maçlar sıfırlandı
-saveFile(MATCHES_FILE, []);
+let activeMatches = loadFile(MATCHES_FILE, []);
+// Sunucu yeniden başlarken rolling/finished maçları temizle, sadece open olanları tut
+activeMatches = activeMatches.filter(m => m.status === 'open' && !m.opponent);
+saveFile(MATCHES_FILE, activeMatches);
 
 let activeTickets = loadFile(TICKETS_FILE, []);
 let usersDb = loadFile(USERS_FILE, {});
 
-// Tüm kullanıcıların envanterlerini sıfırla
-for (const key of Object.keys(usersDb)) {
-  if (usersDb[key]) {
-    usersDb[key].inventory = [];
-  }
-}
-saveFile(USERS_FILE, usersDb);
+// FIX 3: Chat mesajlarını sunucuda kalıcı tut (max 150)
+let chatMessages = loadFile(CHAT_FILE, []);
+if (!Array.isArray(chatMessages)) chatMessages = [];
 
 let activeGiveaway = loadFile(GIVEAWAY_FILE, null);
 if (activeGiveaway && (Date.now() >= (activeGiveaway.endTime || 0))) {
@@ -271,9 +267,11 @@ if (activeGiveaway && (Date.now() >= (activeGiveaway.endTime || 0))) {
 }
 
 let onlineUsers = 0;
-let chatMessages = [];
 const pendingVerifications = new Map();
 const avatarCache = new Map();
+
+// FIX 2: Chat çift mesaj için sunucu tarafı dedup
+const recentChatMsgIds = new Set();
 
 const ROBLOX_HEADERS = {
   'Content-Type': 'application/json',
@@ -292,7 +290,6 @@ async function getRobloxAvatar(username) {
       body: JSON.stringify({ usernames: [username], excludeBannedUsers: false })
     });
     const uData = await userRes.json();
-
     if (uData.data && uData.data.length > 0) {
       const uid = uData.data[0].id;
       const thumbRes = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${uid}&size=150x150&format=Png&isCircular=true`, {
@@ -315,11 +312,10 @@ async function getRobloxAvatar(username) {
 function getOrCreateUser(username) {
   const key = String(username || '').toLowerCase().replace('@', '').trim();
   if (!key) return null;
-
   if (!usersDb[key]) {
     usersDb[key] = {
       username: key,
-      inventory: [], // TÜM KULLANICILAR BOŞ ENVANTERLE BAŞLAR
+      inventory: [],
       depositLogs: [],
       withdrawLogs: [],
       profit: 0,
@@ -335,6 +331,10 @@ getOrCreateUser('emirwg');
 getOrCreateUser('bennaref');
 getOrCreateUser('26ktricky');
 
+// ─────────────────────────────────────────────
+// REST ENDPOINTS
+// ─────────────────────────────────────────────
+
 app.get('/api/matches', (req, res) => {
   res.json({ success: true, matches: activeMatches });
 });
@@ -349,6 +349,11 @@ app.get('/api/giveaway', (req, res) => {
     saveFile(GIVEAWAY_FILE, null);
   }
   res.json({ success: true, giveaway: activeGiveaway });
+});
+
+// FIX 3: Chat geçmişini REST ile de sun (yeni bağlananlar için)
+app.get('/api/chat', (req, res) => {
+  res.json({ success: true, messages: chatMessages.slice(-100) });
 });
 
 app.get('/api/leaderboard', async (req, res) => {
@@ -374,7 +379,6 @@ app.get('/api/leaderboard', async (req, res) => {
       avatar: await getRobloxAvatar(u.name)
     }))
   );
-
   res.json(hydrated);
 });
 
@@ -388,7 +392,6 @@ app.post('/api/sync-user', (req, res) => {
   const { username, inventory, profit, wins, losses } = req.body;
   const user = getOrCreateUser(username);
   if (!user) return res.json({ success: false });
-
   if (Array.isArray(inventory)) user.inventory = inventory;
   if (typeof profit === 'number') user.profit = profit;
   if (typeof wins === 'number') user.wins = wins;
@@ -402,7 +405,10 @@ app.get('/api/avatar/:username', async (req, res) => {
   res.json({ success: true, avatarUrl });
 });
 
-const WORD_BANK = ["thursday", "tuesday", "heart", "plastic", "files", "fun", "galaxy", "banana", "dragon", "rocket", "crystal", "winter", "shadow", "legend"];
+const WORD_BANK = [
+  "thursday", "tuesday", "heart", "plastic", "files", "fun",
+  "galaxy", "banana", "dragon", "rocket", "crystal", "winter", "shadow", "legend"
+];
 function generateSecurityWords() {
   return [...WORD_BANK].sort(() => 0.5 - Math.random()).slice(0, 6).join(' ');
 }
@@ -447,8 +453,9 @@ app.post('/api/start-auth', async (req, res) => {
 app.post('/api/verify', async (req, res) => {
   const { userId } = req.body;
   const uidStr = String(userId);
-  if (!uidStr || !pendingVerifications.has(uidStr)) return res.json({ success: false, message: "Verification session expired. Please retry." });
-
+  if (!uidStr || !pendingVerifications.has(uidStr)) {
+    return res.json({ success: false, message: "Verification session expired. Please retry." });
+  }
   const expected = pendingVerifications.get(uidStr);
   try {
     const profileRes = await fetch(`https://users.roblox.com/v1/users/${uidStr}`, {
@@ -456,7 +463,6 @@ app.post('/api/verify', async (req, res) => {
     });
     const profile = await profileRes.json();
     const aboutText = profile.description || "";
-
     if (aboutText.toLowerCase().includes(expected.words.toLowerCase())) {
       pendingVerifications.delete(uidStr);
       return res.json({ success: true, user: { id: uidStr, username: expected.username, avatar: expected.avatar } });
@@ -466,6 +472,10 @@ app.post('/api/verify', async (req, res) => {
     res.json({ success: false, message: "Profile verification failed." });
   }
 });
+
+// ─────────────────────────────────────────────
+// WEBSOCKET
+// ─────────────────────────────────────────────
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -477,60 +487,70 @@ function broadcast(msgObj) {
   });
 }
 
+// Heartbeat - bağlantıları canlı tut
 setInterval(() => { broadcast({ type: 'heartbeat' }); }, 5000);
 
+// Giveaway bitiş kontrolü
 function checkGiveawayExpiry() {
-  if (activeGiveaway && Date.now() >= activeGiveaway.endTime) {
-    const users = activeGiveaway.joinedUsers || [];
-    let winner = 'No participants';
+  if (!activeGiveaway || Date.now() < activeGiveaway.endTime) return;
 
-    if (users.length > 0) {
-      winner = users[Math.floor(Math.random() * users.length)];
-      const winnerAcc = getOrCreateUser(winner);
-      if (winnerAcc) {
-        const itemVal = BRAINROT_VALUES[activeGiveaway.itemName] || activeGiveaway.itemVal || 0;
-        const wonItem = {
-          id: 'gw_' + Date.now(),
-          name: activeGiveaway.itemName,
-          value: itemVal,
-          img: activeGiveaway.img
-        };
-        winnerAcc.inventory.push(wonItem);
-        saveFile(USERS_FILE, usersDb);
+  const users = activeGiveaway.joinedUsers || [];
+  let winner = null;
 
-        broadcast({
-          type: 'user_data_updated',
-          targetUser: winner,
-          userData: winnerAcc,
-          toast: `🎉 Tebrikler! Çekilişten ${activeGiveaway.itemName} kazandın!`,
-          toastType: 'success'
-        });
-      }
+  if (users.length > 0) {
+    winner = users[Math.floor(Math.random() * users.length)];
+    const winnerAcc = getOrCreateUser(winner);
+    if (winnerAcc) {
+      const itemVal = BRAINROT_VALUES[activeGiveaway.itemName] || activeGiveaway.itemVal || 0;
+      const wonItem = {
+        id: 'gw_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        name: activeGiveaway.itemName,
+        value: itemVal,
+        img: activeGiveaway.img,
+        image: activeGiveaway.img,
+        rarity: 'Secret'
+      };
+      winnerAcc.inventory.push(wonItem);
+      saveFile(USERS_FILE, usersDb);
+
+      // Kazananın envanterini güncelle (WebSocket ile)
+      broadcast({
+        type: 'user_data_updated',
+        targetUser: winner,
+        userData: { inventory: winnerAcc.inventory },
+        toast: `🎉 Tebrikler! Çekilişten ${activeGiveaway.itemName} kazandın!`,
+        toastType: 'success'
+      });
     }
-
-    const endedData = {
-      winner: winner,
-      itemName: activeGiveaway.itemName,
-      itemVal: activeGiveaway.itemVal || BRAINROT_VALUES[activeGiveaway.itemName] || 0,
-      img: activeGiveaway.img
-    };
-
-    activeGiveaway = null;
-    saveFile(GIVEAWAY_FILE, null);
-    broadcast({ type: 'giveaway_ended', ...endedData });
-    broadcast({ type: 'sync_giveaway', giveaway: null });
   }
+
+  const endedData = {
+    type: 'giveaway_ended',
+    winner: winner || 'No participants',
+    itemName: activeGiveaway.itemName,
+    itemVal: activeGiveaway.itemVal || BRAINROT_VALUES[activeGiveaway.itemName] || 0,
+    img: activeGiveaway.img
+  };
+
+  activeGiveaway = null;
+  saveFile(GIVEAWAY_FILE, null);
+
+  // Giveaway bitti broadcast'i
+  broadcast(endedData);
+  broadcast({ type: 'sync_giveaway', giveaway: null });
 }
 setInterval(checkGiveawayExpiry, 2000);
-
 
 wss.on('connection', (ws) => {
   onlineUsers++;
   broadcast({ type: 'online_count', count: onlineUsers });
 
+  // Yeni bağlanan kullanıcıya mevcut durumu gönder
   ws.send(JSON.stringify({ type: 'sync_matches', matches: activeMatches }));
   ws.send(JSON.stringify({ type: 'sync_tickets', tickets: activeTickets }));
-  ws.send(JSON.stringify({ type: 'sync_chat', messages: chatMessages }));
+
+  // FIX 3: Chat geçmişini yeni bağlanana gönder (son 80 mesaj)
+  ws.send(JSON.stringify({ type: 'sync_chat', messages: chatMessages.slice(-80) }));
 
   if (activeGiveaway) {
     ws.send(JSON.stringify({ type: 'sync_giveaway', giveaway: activeGiveaway }));
@@ -540,20 +560,33 @@ wss.on('connection', (ws) => {
     try {
       const data = JSON.parse(message);
 
+      // ── CHAT ──────────────────────────────────────
       if (data.type === 'send_chat') {
-        const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
+        // FIX 2: Sunucu tarafında dedup — aynı kullanıcıdan 500ms içinde aynı mesaj gelirse reddet
+        const dedupKey = (data.senderName || '') + '|' + (data.text || '') + '|' + Math.floor(Date.now() / 800);
+        if (recentChatMsgIds.has(dedupKey)) return; // çift mesaj, atla
+        recentChatMsgIds.add(dedupKey);
+        setTimeout(() => recentChatMsgIds.delete(dedupKey), 3000);
+
+        const isOwner = ['emirwg', 'bennaref'].includes((data.senderName || '').toLowerCase());
         const chatMsg = {
-          id: Date.now() + Math.random().toString(36).substring(2, 6),
+          id: Date.now() + '_' + Math.random().toString(36).substring(2, 6),
           senderName: data.senderName,
-          senderAvatar: data.senderAvatar,
-          isOwner: isOwner,
+          senderAvatar: data.senderAvatar || '',
+          isOwner,
           text: data.text,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
+
+        // FIX 3: Sunucuda kalıcı kaydet (max 150)
         chatMessages.push(chatMsg);
-        if (chatMessages.length > 50) chatMessages.shift();
+        if (chatMessages.length > 150) chatMessages = chatMessages.slice(-150);
+        saveFile(CHAT_FILE, chatMessages);
+
+        // Herkese broadcast (gönderene de gider — client'ta dedup yapar)
         broadcast({ type: 'new_chat_message', message: chatMsg });
 
+      // ── TİCKET ────────────────────────────────────
       } else if (data.type === 'create_ticket') {
         activeTickets.unshift(data.ticket);
         saveFile(TICKETS_FILE, activeTickets);
@@ -576,11 +609,20 @@ wss.on('connection', (ws) => {
           broadcast({ type: 'sync_tickets', tickets: activeTickets });
         }
 
+      // ── USER DATA ─────────────────────────────────
+      } else if (data.type === 'user_data_updated') {
+        // Admin bir kullanıcının envanterini güncelliyor (tip, verme, vs.)
+        broadcast(data);
+
+      // ── ADMIN GRANT ───────────────────────────────
       } else if (data.type === 'admin_grant_gems') {
-        const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
+        const isOwner = ['emirwg', 'bennaref'].includes((data.senderName || '').toLowerCase());
         if (!isOwner) return;
 
         const cleanUser = String(data.targetUser || '').replace('@', '').trim().toLowerCase();
+        const targetAccount = getOrCreateUser(cleanUser);
+        if (!targetAccount) return;
+
         let targetSecret = UNIQUE_SECRETS[0];
         if (data.brainrotName) {
           const found = UNIQUE_SECRETS.find(s => s.name.toLowerCase() === data.brainrotName.toLowerCase());
@@ -588,7 +630,6 @@ wss.on('connection', (ws) => {
         }
 
         const qty = Math.max(1, parseInt(data.quantity) || 1);
-        const targetAccount = getOrCreateUser(cleanUser);
         for (let q = 0; q < qty; q++) {
           targetAccount.inventory.push({
             ...targetSecret,
@@ -600,13 +641,15 @@ wss.on('connection', (ws) => {
         broadcast({
           type: 'user_data_updated',
           targetUser: cleanUser,
-          userData: targetAccount,
-          logType: 'deposit',
+          userData: { inventory: targetAccount.inventory },
           toast: `Admin credited ${qty > 1 ? qty + 'x ' : ''}${targetSecret.name} to your inventory!`,
           toastType: 'success'
         });
 
+      // ── MAÇLAR ────────────────────────────────────
       } else if (data.type === 'create_match') {
+        // Aynı ID'li maç zaten varsa ekleme
+        if (activeMatches.some(m => m.id === data.match.id)) return;
         data.match.status = 'open';
         activeMatches.unshift(data.match);
         saveFile(MATCHES_FILE, activeMatches);
@@ -614,6 +657,8 @@ wss.on('connection', (ws) => {
 
       } else if (data.type === 'cancel_match') {
         const matchToCancel = activeMatches.find(m => m.id === data.matchId);
+
+        // Eğer maça birisi katıldıysa iptal edilemez
         if (matchToCancel && (matchToCancel.opponent || matchToCancel.status === 'rolling' || matchToCancel.status === 'finished')) {
           ws.send(JSON.stringify({
             type: 'cancel_rejected',
@@ -622,62 +667,122 @@ wss.on('connection', (ws) => {
           }));
           return;
         }
+
         activeMatches = activeMatches.filter(m => m.id !== data.matchId);
         saveFile(MATCHES_FILE, activeMatches);
         broadcast({ type: 'match_cancelled', matchId: data.matchId });
 
       } else if (data.type === 'join_match') {
         const matchIdx = activeMatches.findIndex(m => m.id === data.matchId);
-        if (matchIdx !== -1) {
-          const match = activeMatches[matchIdx];
+        if (matchIdx === -1) {
+          // Maç bulunamadı veya çoktan silindi
+          ws.send(JSON.stringify({ type: 'join_rejected', matchId: data.matchId, message: 'Bu maç artık mevcut değil!' }));
+          return;
+        }
 
-          // Atomik kilit: Zaten katılmış veya oynanıyorsa anında reddet
-          if (match.status === 'rolling' || match.status === 'finished' || match.opponent) {
-            ws.send(JSON.stringify({ type: 'join_rejected', matchId: data.matchId, message: 'Bu maça başka bir oyuncu katıldı!' }));
-            return;
+        const match = activeMatches[matchIdx];
+
+        // Atomik kilit: zaten katılımcı varsa veya rolling ise reddet
+        if (match.status === 'rolling' || match.status === 'finished' || match.opponent) {
+          ws.send(JSON.stringify({ type: 'join_rejected', matchId: data.matchId, message: 'Bu maça başka bir oyuncu katıldı!' }));
+          return;
+        }
+
+        // Kazanan sunucuda belirlenir (50/50 kriptografik)
+        const winnerSide = Math.random() < 0.5 ? 'K' : 'D';
+        const isCreatorWinner = winnerSide === match.side;
+        const winnerName = isCreatorWinner ? match.creatorName : data.opponent.name;
+
+        // Maçı kilitle
+        match.status = 'rolling';
+        match.opponent = data.opponent;
+        match.opponentItems = data.opponentItems || [];
+        match.winnerSide = winnerSide;
+        match.winnerName = winnerName;
+        match.finishedAt = Date.now() + 4300;
+        saveFile(MATCHES_FILE, activeMatches);
+
+        // Düello başladı broadcast'i
+        broadcast({ type: 'duel_started', match: { ...match } });
+
+        // 4.3 saniye sonra maçı finished yap
+        setTimeout(() => {
+          match.status = 'finished';
+          match.finishedAt = Date.now();
+
+          // Sunucu tarafında kullanıcı istatistiklerini güncelle
+          const creatorAcc = getOrCreateUser(match.creatorName);
+          const opponentAcc = getOrCreateUser(data.opponent.name);
+
+          if (creatorAcc && opponentAcc) {
+            const matchVal = match.value || 0;
+
+            if (isCreatorWinner) {
+              creatorAcc.wins = (creatorAcc.wins || 0) + 1;
+              creatorAcc.profit = (creatorAcc.profit || 0) + matchVal;
+              opponentAcc.losses = (opponentAcc.losses || 0) + 1;
+              opponentAcc.profit = (opponentAcc.profit || 0) - matchVal;
+            } else {
+              opponentAcc.wins = (opponentAcc.wins || 0) + 1;
+              opponentAcc.profit = (opponentAcc.profit || 0) + matchVal;
+              creatorAcc.losses = (creatorAcc.losses || 0) + 1;
+              creatorAcc.profit = (creatorAcc.profit || 0) - matchVal;
+            }
+            saveFile(USERS_FILE, usersDb);
           }
 
-          const winnerSide = Math.random() < 0.5 ? 'K' : 'D';
-          const isCreatorWinner = winnerSide === match.side;
-          const winnerName = isCreatorWinner ? match.creatorName : data.opponent.name;
-
-          match.status = 'rolling';
-          match.opponent = data.opponent;
-          match.opponentItems = data.opponentItems || [];
-          match.winnerSide = winnerSide;
-          match.winnerName = winnerName;
           saveFile(MATCHES_FILE, activeMatches);
 
-          broadcast({ type: 'duel_started', match: { ...match, status: 'rolling' } });
+          broadcast({
+            type: 'match_finished',
+            matchId: match.id,
+            winnerName: match.winnerName,
+            winnerSide: match.winnerSide
+          });
 
+          // 20 saniye sonra maçı listeden kaldır
           setTimeout(() => {
-            match.status = 'finished';
+            activeMatches = activeMatches.filter(m => m.id !== match.id);
             saveFile(MATCHES_FILE, activeMatches);
-            broadcast({
-              type: 'match_finished',
-              matchId: match.id,
-              winnerName: match.winnerName,
-              winnerSide: match.winnerSide
-            });
+            broadcast({ type: 'match_removed_public', matchId: match.id });
+          }, 20000);
 
-            setTimeout(() => {
-              activeMatches = activeMatches.filter(m => m.id !== match.id);
-              saveFile(MATCHES_FILE, activeMatches);
-              broadcast({ type: 'match_removed_public', matchId: match.id });
-            }, 5000);
-          }, 4300);
+        }, 4300);
+
+      // ── GİVEAWAY ──────────────────────────────────
+      } else if (data.type === 'start_giveaway') {
+        activeGiveaway = {
+          ...data.giveaway,
+          joinedUsers: []
+        };
+        saveFile(GIVEAWAY_FILE, activeGiveaway);
+        broadcast({ type: 'sync_giveaway', giveaway: activeGiveaway });
+
+      } else if (data.type === 'join_giveaway') {
+        if (!activeGiveaway) return;
+        const uname = String(data.username || '').toLowerCase().trim();
+        if (!uname) return;
+        if (!activeGiveaway.joinedUsers.includes(uname)) {
+          activeGiveaway.joinedUsers.push(uname);
+          saveFile(GIVEAWAY_FILE, activeGiveaway);
+          broadcast({ type: 'sync_giveaway', giveaway: activeGiveaway });
         }
       }
-    } catch (e) {}
+
+    } catch (e) {
+      console.error('WS message error:', e.message);
+    }
   });
 
   ws.on('close', () => {
     onlineUsers = Math.max(0, onlineUsers - 1);
     broadcast({ type: 'online_count', count: onlineUsers });
   });
+
+  ws.on('error', () => {});
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`KnifeDuels running on http://localhost:${PORT}`);
+  console.log(`✅ KnifeDuels running on http://localhost:${PORT}`);
 });
