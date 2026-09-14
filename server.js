@@ -261,6 +261,14 @@ saveFile(BRAINROTS_FILE, UNIQUE_SECRETS);
 
 // KALICI MAÇ VE VERİTABANI YÖNETİMİ (Sunucu yeniden başlasa bile silinmez)
 let activeMatches = loadFile(MATCHES_FILE, []);
+// Temizlik: Sunucu yeniden başladığında 'rolling' kalan maçları otomatik 'finished' yap
+activeMatches = activeMatches.map(m => {
+  if (m && m.status === 'rolling') {
+    return { ...m, status: 'finished' };
+  }
+  return m;
+});
+saveFile(MATCHES_FILE, activeMatches);
 let activeTickets = loadFile(TICKETS_FILE, []);
 let usersDb = loadFile(USERS_FILE, {});
 
