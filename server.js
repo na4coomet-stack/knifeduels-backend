@@ -390,11 +390,17 @@ app.post('/api/sync-user', (req, res) => {
   if (!user) return res.json({ success: false });
 
   if (Array.isArray(inventory)) user.inventory = inventory;
-  if (typeof profit === 'number') user.profit = profit;
-  if (typeof wins === 'number') user.wins = wins;
-  if (typeof losses === 'number') user.losses = losses;
+  if (profit !== undefined && profit !== null && !isNaN(Number(profit))) {
+    user.profit = Math.round(Number(profit));
+  }
+  if (wins !== undefined && wins !== null && !isNaN(Number(wins))) {
+    user.wins = Math.round(Number(wins));
+  }
+  if (losses !== undefined && losses !== null && !isNaN(Number(losses))) {
+    user.losses = Math.round(Number(losses));
+  }
   saveFile(USERS_FILE, usersDb);
-  res.json({ success: true, profit: user.profit });
+  res.json({ success: true, profit: user.profit, userData: user });
 });
 
 app.get('/api/avatar/:username', async (req, res) => {
@@ -664,28 +670,28 @@ wss.on('connection', (ws) => {
 
             if (isCreatorWinner) {
               if (creatorAcc) {
-                creatorAcc.profit = (creatorAcc.profit || 0) + opponentItemsVal;
+                creatorAcc.profit = (Number(creatorAcc.profit) || 0) + opponentItemsVal;
                 creatorAcc.wins = (creatorAcc.wins || 0) + 1;
                 if (Array.isArray(opponentItems) && opponentItems.length > 0) {
                   creatorAcc.inventory.push(...opponentItems);
                 }
               }
               if (opponentAcc) {
-                opponentAcc.profit = (opponentAcc.profit || 0) - opponentItemsVal;
+                opponentAcc.profit = (Number(opponentAcc.profit) || 0) - opponentItemsVal;
                 opponentAcc.losses = (opponentAcc.losses || 0) + 1;
                 const oppItemIds = new Set(opponentItems.map(i => i.id));
                 opponentAcc.inventory = (opponentAcc.inventory || []).filter(i => !oppItemIds.has(i.id));
               }
             } else {
               if (opponentAcc) {
-                opponentAcc.profit = (opponentAcc.profit || 0) + creatorItemsVal;
+                opponentAcc.profit = (Number(opponentAcc.profit) || 0) + creatorItemsVal;
                 opponentAcc.wins = (opponentAcc.wins || 0) + 1;
                 if (Array.isArray(creatorItems) && creatorItems.length > 0) {
                   opponentAcc.inventory.push(...creatorItems);
                 }
               }
               if (creatorAcc) {
-                creatorAcc.profit = (creatorAcc.profit || 0) - creatorItemsVal;
+                creatorAcc.profit = (Number(creatorAcc.profit) || 0) - creatorItemsVal;
                 creatorAcc.losses = (creatorAcc.losses || 0) + 1;
                 const creatorItemIds = new Set(creatorItems.map(i => i.id));
                 creatorAcc.inventory = (creatorAcc.inventory || []).filter(i => !creatorItemIds.has(i.id));
