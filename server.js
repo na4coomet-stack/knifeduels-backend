@@ -335,6 +335,17 @@ getOrCreateUser('emirwg');
 getOrCreateUser('bennaref');
 getOrCreateUser('26ktricky');
 
+app.post('/api/create-match', (req, res) => {
+  const match = req.body.match;
+  if (!match || !match.id) return res.json({ success: false, message: 'Invalid match data' });
+  match.status = 'open';
+  activeMatches = activeMatches.filter(m => m.id !== match.id);
+  activeMatches.unshift(match);
+  saveFile(MATCHES_FILE, activeMatches);
+  broadcast({ type: 'match_created', match });
+  res.json({ success: true, match });
+});
+
 app.get('/api/matches', (req, res) => {
   res.json({ success: true, matches: activeMatches });
 });
