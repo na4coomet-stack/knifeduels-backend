@@ -409,9 +409,20 @@ function getOrCreateUser(username) {
   return usersDb[key];
 }
 
-getOrCreateUser('emirwg');
-getOrCreateUser('bennaref');
-getOrCreateUser('26ktricky');
+const DEFAULT_ADMIN_SEEDS = [
+  { name: 'emirwg', profit: 4500000000, wins: 32, losses: 8 },
+  { name: 'bennaref', profit: 2100000000, wins: 24, losses: 9 },
+  { name: '26ktricky', profit: 890000000, wins: 18, losses: 14 }
+];
+DEFAULT_ADMIN_SEEDS.forEach(adm => {
+  const u = getOrCreateUser(adm.name);
+  if (u && (!u.profit || u.profit === 0)) {
+    u.profit = adm.profit;
+    u.wins = u.wins || adm.wins;
+    u.losses = u.losses || adm.losses;
+  }
+});
+saveFile(USERS_FILE, usersDb);
 
 app.post('/api/join-match', (req, res) => {
   const { matchId, opponent, opponentItems } = req.body;
