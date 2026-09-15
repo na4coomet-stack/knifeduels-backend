@@ -45,6 +45,38 @@ function saveFile(file, data) {
   } catch (e) {}
 }
 
+const PUNISHMENTS_FILE = path.join(__dirname, 'punishments.json');
+const CUSTOM_VALS_FILE = path.join(__dirname, 'custom_brainrot_values.json');
+const ADMIN_ACCOUNTS = ['emirwg', 'bennaref', '26ktricky'];
+
+function getActiveBans() {
+  const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+  return p.bans || [];
+}
+
+function getActiveMutes() {
+  const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+  const now = Date.now();
+  const validMutes = (p.mutes || []).filter(m => m.expiresAt > now);
+  if (validMutes.length !== (p.mutes || []).length) {
+    p.mutes = validMutes;
+    saveFile(PUNISHMENTS_FILE, p);
+  }
+  return validMutes;
+}
+
+function isUserBanned(username) {
+  if (!username) return null;
+  const clean = String(username).toLowerCase().trim();
+  return getActiveBans().find(b => b.username && b.username.toLowerCase().trim() === clean) || null;
+}
+
+function getUserActiveMute(username) {
+  if (!username) return null;
+  const clean = String(username).toLowerCase().trim();
+  return getActiveMutes().find(m => m.username && m.username.toLowerCase().trim() === clean) || null;
+}
+
 const BRAINROT_VALUES = {
   "1x1x1x1x": 1000,
   "1x1x1x1": 1000,
@@ -195,6 +227,16 @@ const BRAINROT_VALUES = {
   "Spaghetti Tualetti": 1000,
   "Spooky and Pumpky": 100000
 };
+
+try {
+  const savedCustom = loadFile(CUSTOM_VALS_FILE, null);
+  if (savedCustom && typeof savedCustom === 'object') {
+    Object.assign(BRAINROT_VALUES, savedCustom);
+    console.log('[Server] Loaded custom brainrot values from file.');
+  }
+} catch (e) {}
+
+
 
 const ALL_SECRET_NAMES = [
   "Griffin", "Dragon Aquanini", "Dragon Gingerini", "Hydra Dragon Cannelloni", "Signore Carapace",
@@ -510,9 +552,13 @@ app.get('/api/leaderboard', async (req, res) => {
 });
 
 app.get('/api/user-data/:username', (req, res) => {
-  const user = getOrCreateUser(req.params.username);
+  const username = req.params.username;
+  const ban = isUserBanned(username);
+  if (ban) return res.json({ success: false, banned: true, reason: ban.reason });
+  const user = getOrCreateUser(username);
   if (!user) return res.json({ success: false });
-  res.json({ success: true, userData: user });
+  const mute = getUserActiveMute(username);
+  res.json({ success: true, userData: user, muted: Boolean(mute), mute: mute || null });
 });
 
 app.post('/api/sync-user', (req, res) => {
@@ -546,6 +592,10 @@ function generateSecurityWords() {
 
 app.post('/api/start-auth', async (req, res) => {
   const { username } = req.body;
+  const banCheck = isUserBanned(username);
+  if (banCheck) {
+    return res.json({ success: false, banned: true, reason: banCheck.reason, message: `Your Banned! [${banCheck.reason}]` });
+  }
   if (!username) return res.json({ success: false, message: "Username is required." });
 
   let userId = "12345678";
@@ -881,4 +931,90 @@ wss.on('connection', (ws) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`KnifeDuels running on http://localhost:${PORT}`);
+});
+
+
+// ===== ADMIN PUNISHMENTS & VALUE MANAGEMENT API =====
+app.get('/api/admin/punishments', (req, res) => {
+  res.json({ success: true, mutes: getActiveMutes(), bans: getActiveBans() });
+});
+
+app.post('/api/admin/mute', (req, res) => {
+  const { username, reason, durationMinutes, issuedBy } = req.body;
+  if (!username) return res.json({ success: false, message: 'Username is required' });
+  const clean = username.toLowerCase().trim();
+  const mins = Math.max(1, parseInt(durationMinutes, 10) || 30);
+  const expiresAt = Date.now() + mins * 60 * 1000;
+  const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+  p.mutes = (p.mutes || []).filter(m => m.username && m.username.toLowerCase().trim() !== clean);
+  const newMute = {
+    username: username.trim(),
+    reason: reason || 'Muted by admin',
+    durationMinutes: mins,
+    issuedBy: issuedBy || 'Admin',
+    issuedAt: Date.now(),
+    expiresAt
+  };
+  p.mutes.unshift(newMute);
+  saveFile(PUNISHMENTS_FILE, p);
+  broadcast({ type: 'user_muted', targetUser: username.trim(), mute: newMute });
+  res.json({ success: true, mute: newMute });
+});
+
+app.post('/api/admin/unmute', (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.json({ success: false });
+  const clean = username.toLowerCase().trim();
+  const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+  p.mutes = (p.mutes || []).filter(m => m.username && m.username.toLowerCase().trim() !== clean);
+  saveFile(PUNISHMENTS_FILE, p);
+  broadcast({ type: 'user_unmuted', targetUser: username.trim() });
+  res.json({ success: true });
+});
+
+app.post('/api/admin/ban', (req, res) => {
+  const { username, reason, issuedBy } = req.body;
+  if (!username) return res.json({ success: false, message: 'Username is required' });
+  const clean = username.toLowerCase().trim();
+  const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+  p.bans = (p.bans || []).filter(b => b.username && b.username.toLowerCase().trim() !== clean);
+  const newBan = {
+    username: username.trim(),
+    reason: reason || 'Banned by admin',
+    issuedBy: issuedBy || 'Admin',
+    issuedAt: Date.now()
+  };
+  p.bans.unshift(newBan);
+  saveFile(PUNISHMENTS_FILE, p);
+  broadcast({ type: 'user_banned', targetUser: username.trim(), ban: newBan });
+  res.json({ success: true, ban: newBan });
+});
+
+app.post('/api/admin/unban', (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.json({ success: false });
+  const clean = username.toLowerCase().trim();
+  const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+  p.bans = (p.bans || []).filter(b => b.username && b.username.toLowerCase().trim() !== clean);
+  saveFile(PUNISHMENTS_FILE, p);
+  broadcast({ type: 'user_unbanned', targetUser: username.trim() });
+  res.json({ success: true });
+});
+
+app.get('/api/check-status/:username', (req, res) => {
+  const username = req.params.username;
+  const ban = isUserBanned(username);
+  if (ban) return res.json({ success: true, banned: true, reason: ban.reason, issuedAt: ban.issuedAt });
+  const mute = getUserActiveMute(username);
+  if (mute) return res.json({ success: true, muted: true, reason: mute.reason, expiresAt: mute.expiresAt, durationMinutes: mute.durationMinutes });
+  res.json({ success: true, ok: true });
+});
+
+app.post('/api/admin/update-brainrot-values', (req, res) => {
+  const { values } = req.body;
+  if (!values || typeof values !== 'object') return res.json({ success: false, message: 'Invalid values' });
+  Object.assign(BRAINROT_VALUES, values);
+  saveFile(CUSTOM_VALS_FILE, BRAINROT_VALUES);
+  broadcast({ type: 'brainrot_values_updated', values: BRAINROT_VALUES });
+  res.json({ success: true, count: Object.keys(values).length });
 });
