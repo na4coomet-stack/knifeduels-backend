@@ -55,7 +55,7 @@ function saveFile(file, data) {
 
 const PUNISHMENTS_FILE = path.join(__dirname, 'punishments.json');
 const CUSTOM_VALS_FILE = path.join(__dirname, 'custom_brainrot_values.json');
-const ADMIN_ACCOUNTS = ['emirwg', 'bennaref', '26ktricky'];
+const ADMIN_ACCOUNTS = ['emirwg', 'bennaref'];
 
 function getActiveBans() {
   const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
