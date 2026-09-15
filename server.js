@@ -343,6 +343,97 @@ getOrCreateUser('emirwg');
 getOrCreateUser('bennaref');
 getOrCreateUser('26ktricky');
 
+app.post('/api/join-match', (req, res) => {
+  const { matchId, opponent, opponentItems } = req.body;
+  const matchIdx = activeMatches.findIndex(m => m.id === matchId);
+  if (matchIdx === -1) return res.json({ success: false, message: 'Match not found' });
+
+  const match = activeMatches[matchIdx];
+  if (match.status === 'rolling' || match.status === 'finished' || match.opponent) {
+    return res.json({ success: false, message: 'Bu maça başka bir oyuncu katıldı!', match });
+  }
+
+  const winnerSide = Math.random() < 0.5 ? 'K' : 'D';
+  const isCreatorWinner = winnerSide === match.side;
+  const winnerName = isCreatorWinner ? match.creatorName : opponent.name;
+
+  match.status = 'finished';
+  match.opponent = opponent;
+  match.opponentItems = opponentItems || [];
+  match.winnerSide = winnerSide;
+  match.winnerName = winnerName;
+  match.finishedAt = Date.now();
+
+  // Kazanç ve Kâr (Profit) Hesaplama ve Kalıcı Kaydetme
+  const creatorItems = match.items || [];
+  const oppItems = match.opponentItems || [];
+  const creatorItemsVal = creatorItems.reduce((acc, i) => acc + (Number(i.value) || BRAINROT_VALUES[i.name] || 0), 0) || Number(match.value) || 0;
+  const opponentItemsVal = oppItems.reduce((acc, i) => acc + (Number(i.value) || BRAINROT_VALUES[i.name] || 0), 0) || Number(match.value) || 0;
+
+  const creatorAcc = getOrCreateUser(match.creatorName);
+  const opponentAcc = getOrCreateUser(opponent.name);
+
+  if (isCreatorWinner) {
+    if (creatorAcc) {
+      creatorAcc.profit = (Number(creatorAcc.profit) || 0) + opponentItemsVal;
+      creatorAcc.wins = (Number(creatorAcc.wins) || 0) + 1;
+      if (Array.isArray(oppItems) && oppItems.length > 0) {
+        creatorAcc.inventory.push(...oppItems);
+      }
+    }
+    if (opponentAcc) {
+      opponentAcc.profit = (Number(opponentAcc.profit) || 0) - opponentItemsVal;
+      opponentAcc.losses = (Number(opponentAcc.losses) || 0) + 1;
+      const oppItemIds = new Set(oppItems.map(i => i.id));
+      opponentAcc.inventory = (opponentAcc.inventory || []).filter(i => !oppItemIds.has(i.id));
+    }
+  } else {
+    if (opponentAcc) {
+      opponentAcc.profit = (Number(opponentAcc.profit) || 0) + creatorItemsVal;
+      opponentAcc.wins = (Number(opponentAcc.wins) || 0) + 1;
+      if (Array.isArray(creatorItems) && creatorItems.length > 0) {
+        opponentAcc.inventory.push(...creatorItems);
+      }
+    }
+    if (creatorAcc) {
+      creatorAcc.profit = (Number(creatorAcc.profit) || 0) - creatorItemsVal;
+      creatorAcc.losses = (Number(creatorAcc.losses) || 0) + 1;
+      const creatorItemIds = new Set(creatorItems.map(i => i.id));
+      creatorAcc.inventory = (creatorAcc.inventory || []).filter(i => !creatorItemIds.has(i.id));
+    }
+  }
+
+  saveFile(USERS_FILE, usersDb);
+
+  // Son 30 bitmiş maçı akışta tut
+  const openOrRolling = activeMatches.filter(m => m.status !== 'finished');
+  const finishedMatches = activeMatches.filter(m => m.status === 'finished').slice(0, 30);
+  activeMatches = [...openOrRolling, ...finishedMatches];
+  saveFile(MATCHES_FILE, activeMatches);
+
+  // WebSocket ile herkese duyur
+  broadcast({ type: 'duel_started', match: { ...match, status: 'rolling' } });
+  broadcast({ type: 'sync_matches', matches: activeMatches });
+  if (creatorAcc) {
+    broadcast({
+      type: 'user_data_updated',
+      targetUser: match.creatorName,
+      userData: creatorAcc,
+      profit: creatorAcc.profit
+    });
+  }
+  if (opponentAcc) {
+    broadcast({
+      type: 'user_data_updated',
+      targetUser: opponent.name,
+      userData: opponentAcc,
+      profit: opponentAcc.profit
+    });
+  }
+
+  res.json({ success: true, match, userWon: !isCreatorWinner });
+});
+
 app.post('/api/create-match', (req, res) => {
   const match = req.body.match;
   if (!match || !match.id) return res.json({ success: false, message: 'Invalid match data' });
