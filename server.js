@@ -581,6 +581,8 @@ app.get('/api/user-data/:username', (req, res) => {
 
 app.post('/api/sync-user', (req, res) => {
   const { username, inventory, profit, wins, losses } = req.body;
+  const banCheck = isUserBanned(username);
+  if (banCheck) return res.json({ success: false, banned: true, reason: banCheck.reason });
   const user = getOrCreateUser(username);
   if (!user) return res.json({ success: false });
 
@@ -655,6 +657,10 @@ app.post('/api/verify', async (req, res) => {
   if (!uidStr || !pendingVerifications.has(uidStr)) return res.json({ success: false, message: "Verification session expired. Please retry." });
 
   const expected = pendingVerifications.get(uidStr);
+  const banCheck = isUserBanned(expected.username);
+  if (banCheck) {
+    return res.json({ success: false, banned: true, reason: banCheck.reason, message: `Your Banned! [${banCheck.reason}]` });
+  }
   try {
     const profileRes = await fetch(`https://users.roblox.com/v1/users/${uidStr}`, {
       headers: ROBLOX_HEADERS
@@ -745,7 +751,82 @@ wss.on('connection', (ws) => {
     try {
       const data = JSON.parse(message);
 
+      if (data.type === 'user_banned') {
+        const username = String(data.targetUser || '').replace(/^@+/, '').trim();
+        const reason = data.reason || 'Banned by admin';
+        const issuedBy = data.issuedBy || 'Admin';
+        if (username) {
+          const clean = username.toLowerCase().trim();
+          const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+          p.bans = (p.bans || []).filter(b => b.username && b.username.toLowerCase().trim() !== clean);
+          const newBan = {
+            username: username,
+            reason: reason,
+            issuedBy: issuedBy,
+            issuedAt: Date.now()
+          };
+          p.bans.unshift(newBan);
+          saveFile(PUNISHMENTS_FILE, p);
+          broadcast({ type: 'user_banned', targetUser: username, ban: newBan });
+        }
+        return;
+      } else if (data.type === 'user_unbanned') {
+        const username = String(data.targetUser || '').replace(/^@+/, '').trim();
+        if (username) {
+          const clean = username.toLowerCase().trim();
+          const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+          p.bans = (p.bans || []).filter(b => b.username && b.username.toLowerCase().trim() !== clean);
+          saveFile(PUNISHMENTS_FILE, p);
+          broadcast({ type: 'user_unbanned', targetUser: username });
+        }
+        return;
+      } else if (data.type === 'user_muted') {
+        const username = String(data.targetUser || '').replace(/^@+/, '').trim();
+        const muteData = data.mute || {};
+        const reason = muteData.reason || data.reason || 'Muted by admin';
+        const durationMinutes = muteData.durationMinutes || data.durationMinutes || 60;
+        const issuedBy = data.issuedBy || 'Admin';
+        if (username) {
+          const clean = username.toLowerCase().trim();
+          const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+          p.mutes = (p.mutes || []).filter(m => m.username && m.username.toLowerCase().trim() !== clean);
+          const newMute = {
+            username: username,
+            reason: reason,
+            durationMinutes: durationMinutes,
+            issuedBy: issuedBy,
+            issuedAt: Date.now(),
+            expiresAt: Date.now() + durationMinutes * 60 * 1000
+          };
+          p.mutes.unshift(newMute);
+          saveFile(PUNISHMENTS_FILE, p);
+          broadcast({ type: 'user_muted', targetUser: username, mute: newMute });
+        }
+        return;
+      } else if (data.type === 'user_unmuted') {
+        const username = String(data.targetUser || '').replace(/^@+/, '').trim();
+        if (username) {
+          const clean = username.toLowerCase().trim();
+          const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+          p.mutes = (p.mutes || []).filter(m => m.username && m.username.toLowerCase().trim() !== clean);
+          saveFile(PUNISHMENTS_FILE, p);
+          broadcast({ type: 'user_unmuted', targetUser: username });
+        }
+        return;
+      }
+
       if (data.type === 'send_chat') {
+        const sender = String(data.senderName || '').replace(/^@+/, '').trim();
+        const banCheck = isUserBanned(sender);
+        if (banCheck) {
+          ws.send(JSON.stringify({ type: 'user_banned', targetUser: sender, ban: banCheck }));
+          return;
+        }
+        const muteCheck = getUserActiveMute(sender);
+        if (muteCheck) {
+          ws.send(JSON.stringify({ type: 'user_muted', targetUser: sender, mute: muteCheck }));
+          return;
+        }
         const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
         const chatMsg = {
           id: Date.now() + Math.random().toString(36).substring(2, 6),
@@ -812,6 +893,12 @@ wss.on('connection', (ws) => {
         });
 
       } else if (data.type === 'create_match') {
+        const creator = String(data.match?.creatorName || '').replace(/^@+/, '').trim();
+        const banCheck = isUserBanned(creator);
+        if (banCheck) {
+          ws.send(JSON.stringify({ type: 'user_banned', targetUser: creator, ban: banCheck }));
+          return;
+        }
         data.match.status = 'open';
         activeMatches.unshift(data.match);
         saveFile(MATCHES_FILE, activeMatches);
@@ -832,6 +919,12 @@ wss.on('connection', (ws) => {
         broadcast({ type: 'match_cancelled', matchId: data.matchId });
 
       } else if (data.type === 'join_match') {
+        const opponentName = String(data.opponent?.name || '').replace(/^@+/, '').trim();
+        const banCheck = isUserBanned(opponentName);
+        if (banCheck) {
+          ws.send(JSON.stringify({ type: 'user_banned', targetUser: opponentName, ban: banCheck }));
+          return;
+        }
         const matchIdx = activeMatches.findIndex(m => m.id === data.matchId);
         if (matchIdx !== -1) {
           const match = activeMatches[matchIdx];
