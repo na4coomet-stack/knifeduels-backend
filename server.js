@@ -8,6 +8,13 @@ const WebSocketServer = require('ws');
 
 const app = express();
 app.use(cors());
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 app.use(express.json());
 app.use(express.static(__dirname));
 
@@ -1017,4 +1024,25 @@ app.post('/api/admin/update-brainrot-values', (req, res) => {
   saveFile(CUSTOM_VALS_FILE, BRAINROT_VALUES);
   broadcast({ type: 'brainrot_values_updated', values: BRAINROT_VALUES });
   res.json({ success: true, count: Object.keys(values).length });
+});
+
+app.post('/api/admin/clear-inventory', (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.json({ success: false, message: 'Username is required' });
+  const user = getOrCreateUser(username);
+  if (user) {
+    user.inventory = [];
+    user.lastClearedAt = Date.now();
+    saveFile(USERS_FILE, usersDb);
+    broadcast({ type: 'inventory_cleared', targetUser: username.trim(), clearedAt: user.lastClearedAt });
+    broadcast({
+      type: 'user_data_updated',
+      targetUser: username.trim(),
+      userData: { inventory: [] },
+      toast: '⚠️ Your inventory was completely cleared by admin.',
+      toastType: 'info'
+    });
+    return res.json({ success: true, message: `Inventory cleared for ${username}` });
+  }
+  res.json({ success: false, message: 'User not found' });
 });
