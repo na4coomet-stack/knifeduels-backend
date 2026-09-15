@@ -1,3 +1,4 @@
+const https = require('https');
 // server.js - KnifeDuels Backend
 const express = require('express');
 const http = require('http');
@@ -38,6 +39,7 @@ const USERS_FILE = path.join(__dirname, 'users.json');
 const BRAINROTS_FILE = path.join(__dirname, 'brainrots.json');
 const GIVEAWAY_FILE = path.join(__dirname, 'giveaway.json');
 const HTML_FILE = path.join(__dirname, 'KnifeDuels.html');
+const CHAT_FILE = path.join(__dirname, 'chat_history.json');
 
 function loadFile(file, def = []) {
   try {
@@ -54,7 +56,7 @@ function saveFile(file, data) {
 
 const PUNISHMENTS_FILE = path.join(__dirname, 'punishments.json');
 const CUSTOM_VALS_FILE = path.join(__dirname, 'custom_brainrot_values.json');
-const ADMIN_ACCOUNTS = ['emirwg', 'bennaref', '26ktricky'];
+const ADMIN_ACCOUNTS = ['emirwg', 'bennaref'];
 
 function getActiveBans() {
   const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
@@ -349,7 +351,7 @@ if (activeGiveaway && (Date.now() >= (activeGiveaway.endTime || 0))) {
 }
 
 let onlineUsers = 0;
-let chatMessages = [];
+let chatMessages = loadFile(CHAT_FILE, []);
 const pendingVerifications = new Map();
 const avatarCache = new Map();
 
@@ -364,11 +366,15 @@ async function getRobloxAvatar(username) {
   if (avatarCache.has(key)) return avatarCache.get(key);
 
   try {
+    const controller = new AbortController();
+    const tId = setTimeout(() => controller.abort(), 3500);
     const userRes = await fetch('https://users.roblox.com/v1/usernames/users', {
       method: 'POST',
       headers: ROBLOX_HEADERS,
-      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false })
+      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false }),
+      signal: controller.signal
     });
+    clearTimeout(tId);
     const uData = await userRes.json();
 
     if (uData.data && uData.data.length > 0) {
@@ -495,6 +501,9 @@ app.post('/api/join-match', (req, res) => {
   // WebSocket ile herkese duyur
   broadcast({ type: 'duel_started', match: { ...match, status: 'rolling' } });
   broadcast({ type: 'sync_matches', matches: activeMatches });
+
+  // Discord Coinflip Ended Bildirimi (Kanal: 1549485791569383625)
+  sendDiscordCoinflipEnded(match);
   if (creatorAcc) {
     broadcast({
       type: 'user_data_updated',
@@ -524,6 +533,35 @@ app.post('/api/create-match', (req, res) => {
   saveFile(MATCHES_FILE, activeMatches);
   broadcast({ type: 'match_created', match });
   res.json({ success: true, match });
+});
+
+app.get('/api/chat', (req, res) => {
+  res.json({ success: true, messages: chatMessages.slice(-60) });
+});
+
+app.post('/api/send-chat', (req, res) => {
+  const { senderName, senderAvatar, text } = req.body;
+  if (!text || !senderName) return res.json({ success: false, message: 'Missing fields' });
+  const sender = String(senderName || '').replace(/^@+/, '').trim();
+  const banCheck = isUserBanned(sender);
+  if (banCheck) return res.json({ success: false, banned: true, reason: banCheck.reason });
+  const muteCheck = getUserActiveMute(sender);
+  if (muteCheck) return res.json({ success: false, muted: true, reason: muteCheck.reason });
+
+  const isOwner = (sender.toLowerCase() === 'emirwg' || sender.toLowerCase() === 'bennaref');
+  const chatMsg = {
+    id: 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    senderName: sender,
+    senderAvatar: senderAvatar || '',
+    isOwner: isOwner,
+    text: String(text).slice(0, 250),
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  };
+  chatMessages.push(chatMsg);
+  if (chatMessages.length > 80) chatMessages = chatMessages.slice(-80);
+  saveFile(CHAT_FILE, chatMessages);
+  broadcast({ type: 'new_chat_message', message: chatMsg });
+  res.json({ success: true, message: chatMsg });
 });
 
 app.get('/api/matches', (req, res) => {
@@ -581,6 +619,8 @@ app.get('/api/user-data/:username', (req, res) => {
 
 app.post('/api/sync-user', (req, res) => {
   const { username, inventory, profit, wins, losses } = req.body;
+  const banCheck = isUserBanned(username);
+  if (banCheck) return res.json({ success: false, banned: true, reason: banCheck.reason });
   const user = getOrCreateUser(username);
   if (!user) return res.json({ success: false });
 
@@ -655,6 +695,10 @@ app.post('/api/verify', async (req, res) => {
   if (!uidStr || !pendingVerifications.has(uidStr)) return res.json({ success: false, message: "Verification session expired. Please retry." });
 
   const expected = pendingVerifications.get(uidStr);
+  const banCheck = isUserBanned(expected.username);
+  if (banCheck) {
+    return res.json({ success: false, banned: true, reason: banCheck.reason, message: `Your Banned! [${banCheck.reason}]` });
+  }
   try {
     const profileRes = await fetch(`https://users.roblox.com/v1/users/${uidStr}`, {
       headers: ROBLOX_HEADERS
@@ -674,6 +718,177 @@ app.post('/api/verify', async (req, res) => {
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
+
+
+// ==========================================================
+// DISCORD COINFLIP ENDED NOTIFICATION (Channel: 1549485791569383625)
+// ==========================================================
+const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID || '1549485791569383625';
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || '';
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || '';
+
+function formatDiscordVal(n) {
+  const num = Number(n) || 0;
+  if (num >= 1_000_000_000) {
+    return parseFloat((num / 1_000_000_000).toFixed(2)) + 'B';
+  }
+  if (num >= 1_000_000) {
+    return parseFloat((num / 1_000_000).toFixed(2)) + 'M';
+  }
+  if (num >= 1_000) {
+    return parseFloat((num / 1_000).toFixed(2)) + 'K';
+  }
+  return num.toLocaleString('en-US');
+}
+
+function buildDiscordCoinflipEmbed(match) {
+  const creatorItems = match.items || [];
+  const opponentItems = match.opponentItems || [];
+
+  const starterTotal = creatorItems.reduce((acc, i) => acc + (Number(i.value) || BRAINROT_VALUES[i.name] || 0), 0) || Number(match.value) || 0;
+  const joinerTotal = opponentItems.reduce((acc, i) => acc + (Number(i.value) || BRAINROT_VALUES[i.name] || 0), 0) || Number(match.value) || 0;
+  const totalValue = starterTotal + joinerTotal;
+
+  // Format Starter Items
+  let starterLines = '';
+  let sTrunc = 0;
+  for (let idx = 0; idx < creatorItems.length; idx++) {
+    const item = creatorItems[idx];
+    const val = Number(item.value) || BRAINROT_VALUES[item.name] || 0;
+    const line = `${item.name || 'Brainrot'} (${formatDiscordVal(val)})
+`;
+    if (starterLines.length + line.length > 900) {
+      sTrunc = creatorItems.length - idx;
+      break;
+    }
+    starterLines += line;
+  }
+  if (sTrunc > 0) starterLines += `+${sTrunc} more items...
+`;
+  if (!starterLines.trim()) starterLines = `No items (${formatDiscordVal(starterTotal)})
+`;
+
+  // Format Joiner Items
+  let joinerLines = '';
+  let jTrunc = 0;
+  for (let idx = 0; idx < opponentItems.length; idx++) {
+    const item = opponentItems[idx];
+    const val = Number(item.value) || BRAINROT_VALUES[item.name] || 0;
+    const line = `${item.name || 'Brainrot'} (${formatDiscordVal(val)})
+`;
+    if (joinerLines.length + line.length > 900) {
+      jTrunc = opponentItems.length - idx;
+      break;
+    }
+    joinerLines += line;
+  }
+  if (jTrunc > 0) joinerLines += `+${jTrunc} more items...
+`;
+  if (!joinerLines.trim()) joinerLines = `No items (${formatDiscordVal(joinerTotal)})
+`;
+
+  const starterName = String(match.creatorName || 'Starter').replace(/^@+/, '').trim();
+  const joinerName = String(match.opponent?.name || 'Joiner').replace(/^@+/, '').trim();
+  const winnerName = String(match.winnerName || starterName).replace(/^@+/, '').trim();
+  const loserName = (winnerName.toLowerCase() === starterName.toLowerCase()) ? joinerName : starterName;
+
+  return {
+    title: 'Coinflip Ended',
+    description: `A ${formatDiscordVal(totalValue)} value coinflip game has successfully\nbeen concluded!`,
+    color: 0x57F287, // Discord vibrant green
+    fields: [
+      {
+        name: `Starter Items (${formatDiscordVal(starterTotal)})`,
+        value: `\`\`\`\n${starterLines.trim()}\n\`\`\``,
+        inline: false
+      },
+      {
+        name: `Joiner Items (${formatDiscordVal(joinerTotal)})`,
+        value: `\`\`\`\n${joinerLines.trim()}\n\`\`\``,
+        inline: false
+      },
+      {
+        name: 'Winner',
+        value: `\`\`\`\n${winnerName}\n\`\`\``,
+        inline: false
+      },
+      {
+        name: 'Loser',
+        value: `\`\`\`\n${loserName}\n\`\`\``,
+        inline: false
+      }
+    ]
+  };
+}
+
+function sendDiscordHttpsRequest(endpointUrl, payload, botToken = null) {
+  return new Promise((resolve, reject) => {
+    try {
+      const url = new URL(endpointUrl);
+      const data = JSON.stringify(payload);
+      const options = {
+        hostname: url.hostname,
+        port: 443,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data),
+          'User-Agent': 'KnifeDuels-DiscordBot/1.0'
+        }
+      };
+      if (botToken) {
+        options.headers['Authorization'] = `Bot ${botToken.replace(/^Bot\s+/i, '').trim()}`;
+      }
+
+      const req = https.request(options, (res) => {
+        let resBody = '';
+        res.on('data', chunk => { resBody += chunk; });
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            console.log('[Discord] Coinflip notification posted successfully to channel ' + (DISCORD_CHANNEL_ID || '1549485791569383625'));
+            resolve({ success: true });
+          } else {
+            console.error(`[Discord] Post failed with HTTP ${res.statusCode}:`, resBody);
+            resolve({ success: false, status: res.statusCode, error: resBody });
+          }
+        });
+      });
+
+      req.on('error', (err) => {
+        console.error('[Discord HTTPS Error]:', err.message);
+        reject(err);
+      });
+
+      req.write(data);
+      req.end();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+function sendDiscordCoinflipEnded(match) {
+  if (!match) return;
+  if (match._discordSent) return;
+  match._discordSent = true;
+
+  const embed = buildDiscordCoinflipEmbed(match);
+  const payload = { embeds: [embed] };
+
+  if (DISCORD_WEBHOOK_URL) {
+    sendDiscordHttpsRequest(DISCORD_WEBHOOK_URL, payload).catch(() => {});
+    return;
+  }
+
+  if (DISCORD_BOT_TOKEN) {
+    const channelId = DISCORD_CHANNEL_ID || '1549485791569383625';
+    const restUrl = `https://discord.com/api/v10/channels/${channelId}/messages`;
+    sendDiscordHttpsRequest(restUrl, payload, DISCORD_BOT_TOKEN).catch(() => {});
+    return;
+  }
+}
+
 
 function broadcast(msgObj) {
   const msg = JSON.stringify(msgObj);
@@ -745,7 +960,116 @@ wss.on('connection', (ws) => {
     try {
       const data = JSON.parse(message);
 
+      if (data.type === 'user_data_updated') {
+        const target = String(data.targetUser || '').replace(/^@+/, '').trim();
+        if (target) {
+          const u = getOrCreateUser(target);
+          if (u && data.userData && Array.isArray(data.userData.inventory)) {
+            u.inventory = data.userData.inventory;
+            if (typeof data.userData.profit === 'number') u.profit = data.userData.profit;
+            saveFile(USERS_FILE, usersDb);
+          }
+          broadcast({
+            type: 'user_data_updated',
+            targetUser: target,
+            userData: data.userData || (u || {}),
+            profit: data.profit || (u ? u.profit : 0),
+            toast: data.toast,
+            toastType: data.toastType
+          });
+        }
+        return;
+      } else if (data.type === 'start_giveaway') {
+        activeGiveaway = data.giveaway;
+        saveFile(GIVEAWAY_FILE, activeGiveaway);
+        broadcast({ type: 'sync_giveaway', giveaway: activeGiveaway });
+        return;
+      } else if (data.type === 'join_giveaway') {
+        if (activeGiveaway && Array.isArray(activeGiveaway.joinedUsers)) {
+          const u = String(data.username || '').toLowerCase().replace(/^@+/, '').trim();
+          if (u && !activeGiveaway.joinedUsers.includes(u)) {
+            activeGiveaway.joinedUsers.push(u);
+            saveFile(GIVEAWAY_FILE, activeGiveaway);
+            broadcast({ type: 'sync_giveaway', giveaway: activeGiveaway });
+          }
+        }
+        return;
+      } else if (data.type === 'user_banned') {
+        const username = String(data.targetUser || '').replace(/^@+/, '').trim();
+        const reason = data.reason || 'Banned by admin';
+        const issuedBy = data.issuedBy || 'Admin';
+        if (username) {
+          const clean = username.toLowerCase().trim();
+          const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+          p.bans = (p.bans || []).filter(b => b.username && b.username.toLowerCase().trim() !== clean);
+          const newBan = {
+            username: username,
+            reason: reason,
+            issuedBy: issuedBy,
+            issuedAt: Date.now()
+          };
+          p.bans.unshift(newBan);
+          saveFile(PUNISHMENTS_FILE, p);
+          broadcast({ type: 'user_banned', targetUser: username, ban: newBan });
+        }
+        return;
+      } else if (data.type === 'user_unbanned') {
+        const username = String(data.targetUser || '').replace(/^@+/, '').trim();
+        if (username) {
+          const clean = username.toLowerCase().trim();
+          const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+          p.bans = (p.bans || []).filter(b => b.username && b.username.toLowerCase().trim() !== clean);
+          saveFile(PUNISHMENTS_FILE, p);
+          broadcast({ type: 'user_unbanned', targetUser: username });
+        }
+        return;
+      } else if (data.type === 'user_muted') {
+        const username = String(data.targetUser || '').replace(/^@+/, '').trim();
+        const muteData = data.mute || {};
+        const reason = muteData.reason || data.reason || 'Muted by admin';
+        const durationMinutes = muteData.durationMinutes || data.durationMinutes || 60;
+        const issuedBy = data.issuedBy || 'Admin';
+        if (username) {
+          const clean = username.toLowerCase().trim();
+          const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+          p.mutes = (p.mutes || []).filter(m => m.username && m.username.toLowerCase().trim() !== clean);
+          const newMute = {
+            username: username,
+            reason: reason,
+            durationMinutes: durationMinutes,
+            issuedBy: issuedBy,
+            issuedAt: Date.now(),
+            expiresAt: Date.now() + durationMinutes * 60 * 1000
+          };
+          p.mutes.unshift(newMute);
+          saveFile(PUNISHMENTS_FILE, p);
+          broadcast({ type: 'user_muted', targetUser: username, mute: newMute });
+        }
+        return;
+      } else if (data.type === 'user_unmuted') {
+        const username = String(data.targetUser || '').replace(/^@+/, '').trim();
+        if (username) {
+          const clean = username.toLowerCase().trim();
+          const p = loadFile(PUNISHMENTS_FILE, { mutes: [], bans: [] });
+          p.mutes = (p.mutes || []).filter(m => m.username && m.username.toLowerCase().trim() !== clean);
+          saveFile(PUNISHMENTS_FILE, p);
+          broadcast({ type: 'user_unmuted', targetUser: username });
+        }
+        return;
+      }
+
       if (data.type === 'send_chat') {
+        const sender = String(data.senderName || '').replace(/^@+/, '').trim();
+        const banCheck = isUserBanned(sender);
+        if (banCheck) {
+          ws.send(JSON.stringify({ type: 'user_banned', targetUser: sender, ban: banCheck }));
+          return;
+        }
+        const muteCheck = getUserActiveMute(sender);
+        if (muteCheck) {
+          ws.send(JSON.stringify({ type: 'user_muted', targetUser: sender, mute: muteCheck }));
+          return;
+        }
         const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
         const chatMsg = {
           id: Date.now() + Math.random().toString(36).substring(2, 6),
@@ -756,7 +1080,8 @@ wss.on('connection', (ws) => {
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         chatMessages.push(chatMsg);
-        if (chatMessages.length > 50) chatMessages.shift();
+        if (chatMessages.length > 80) chatMessages = chatMessages.slice(-80);
+        saveFile(CHAT_FILE, chatMessages);
         broadcast({ type: 'new_chat_message', message: chatMsg });
 
       } else if (data.type === 'create_ticket') {
@@ -812,6 +1137,12 @@ wss.on('connection', (ws) => {
         });
 
       } else if (data.type === 'create_match') {
+        const creator = String(data.match?.creatorName || '').replace(/^@+/, '').trim();
+        const banCheck = isUserBanned(creator);
+        if (banCheck) {
+          ws.send(JSON.stringify({ type: 'user_banned', targetUser: creator, ban: banCheck }));
+          return;
+        }
         data.match.status = 'open';
         activeMatches.unshift(data.match);
         saveFile(MATCHES_FILE, activeMatches);
@@ -832,6 +1163,12 @@ wss.on('connection', (ws) => {
         broadcast({ type: 'match_cancelled', matchId: data.matchId });
 
       } else if (data.type === 'join_match') {
+        const opponentName = String(data.opponent?.name || '').replace(/^@+/, '').trim();
+        const banCheck = isUserBanned(opponentName);
+        if (banCheck) {
+          ws.send(JSON.stringify({ type: 'user_banned', targetUser: opponentName, ban: banCheck }));
+          return;
+        }
         const matchIdx = activeMatches.findIndex(m => m.id === data.matchId);
         if (matchIdx !== -1) {
           const match = activeMatches[matchIdx];
@@ -910,8 +1247,12 @@ wss.on('connection', (ws) => {
               type: 'match_finished',
               matchId: match.id,
               winnerName: match.winnerName,
-              winnerSide: match.winnerSide
+              winnerSide: match.winnerSide,
+              match: match
             });
+
+            // Discord Coinflip Ended Bildirimi (Kanal: 1549485791569383625)
+            sendDiscordCoinflipEnded(match);
 
             // Oyuncuların kâr ve envanter güncellemesini anında ilet
             if (creatorAcc) {
