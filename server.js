@@ -38,6 +38,7 @@ const USERS_FILE = path.join(__dirname, 'users.json');
 const BRAINROTS_FILE = path.join(__dirname, 'brainrots.json');
 const GIVEAWAY_FILE = path.join(__dirname, 'giveaway.json');
 const HTML_FILE = path.join(__dirname, 'KnifeDuels.html');
+const CHAT_FILE = path.join(__dirname, 'chat_history.json');
 
 function loadFile(file, def = []) {
   try {
@@ -349,7 +350,7 @@ if (activeGiveaway && (Date.now() >= (activeGiveaway.endTime || 0))) {
 }
 
 let onlineUsers = 0;
-let chatMessages = [];
+let chatMessages = loadFile(CHAT_FILE, []);
 const pendingVerifications = new Map();
 const avatarCache = new Map();
 
@@ -364,11 +365,15 @@ async function getRobloxAvatar(username) {
   if (avatarCache.has(key)) return avatarCache.get(key);
 
   try {
+    const controller = new AbortController();
+    const tId = setTimeout(() => controller.abort(), 3500);
     const userRes = await fetch('https://users.roblox.com/v1/usernames/users', {
       method: 'POST',
       headers: ROBLOX_HEADERS,
-      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false })
+      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false }),
+      signal: controller.signal
     });
+    clearTimeout(tId);
     const uData = await userRes.json();
 
     if (uData.data && uData.data.length > 0) {
@@ -524,6 +529,35 @@ app.post('/api/create-match', (req, res) => {
   saveFile(MATCHES_FILE, activeMatches);
   broadcast({ type: 'match_created', match });
   res.json({ success: true, match });
+});
+
+app.get('/api/chat', (req, res) => {
+  res.json({ success: true, messages: chatMessages.slice(-60) });
+});
+
+app.post('/api/send-chat', (req, res) => {
+  const { senderName, senderAvatar, text } = req.body;
+  if (!text || !senderName) return res.json({ success: false, message: 'Missing fields' });
+  const sender = String(senderName || '').replace(/^@+/, '').trim();
+  const banCheck = isUserBanned(sender);
+  if (banCheck) return res.json({ success: false, banned: true, reason: banCheck.reason });
+  const muteCheck = getUserActiveMute(sender);
+  if (muteCheck) return res.json({ success: false, muted: true, reason: muteCheck.reason });
+
+  const isOwner = (sender.toLowerCase() === 'emirwg' || sender.toLowerCase() === 'bennaref');
+  const chatMsg = {
+    id: 'c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+    senderName: sender,
+    senderAvatar: senderAvatar || '',
+    isOwner: isOwner,
+    text: String(text).slice(0, 250),
+    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  };
+  chatMessages.push(chatMsg);
+  if (chatMessages.length > 80) chatMessages = chatMessages.slice(-80);
+  saveFile(CHAT_FILE, chatMessages);
+  broadcast({ type: 'new_chat_message', message: chatMsg });
+  res.json({ success: true, message: chatMsg });
 });
 
 app.get('/api/matches', (req, res) => {
@@ -837,7 +871,8 @@ wss.on('connection', (ws) => {
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         chatMessages.push(chatMsg);
-        if (chatMessages.length > 50) chatMessages.shift();
+        if (chatMessages.length > 80) chatMessages = chatMessages.slice(-80);
+        saveFile(CHAT_FILE, chatMessages);
         broadcast({ type: 'new_chat_message', message: chatMsg });
 
       } else if (data.type === 'create_ticket') {
