@@ -669,15 +669,19 @@ app.get('/api/leaderboard', async (req, res) => {
     };
   });
 
+  let filteredUsers = users;
   if (type === 'profit') {
-    users.sort((a, b) => b.profit - a.profit);
+    filteredUsers = users.filter(u => (u.profit || 0) !== 0);
+    filteredUsers.sort((a, b) => b.profit - a.profit);
   } else if (type === 'duels') {
-    users.sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses) || b.wins - a.wins);
+    filteredUsers = users.filter(u => ((u.wins || 0) + (u.losses || 0)) > 0);
+    filteredUsers.sort((a, b) => (b.wins + b.losses) - (a.wins + a.losses) || b.wins - a.wins);
   } else if (type === 'val') {
-    users.sort((a, b) => b.totalVal - a.totalVal);
+    filteredUsers = users.filter(u => (u.totalVal || 0) > 0);
+    filteredUsers.sort((a, b) => b.totalVal - a.totalVal);
   }
-
-  const topUsers = users.slice(0, 20);
+  const topUsers = filteredUsers.slice(0, 20);
+  
   const hydrated = await Promise.all(
     topUsers.map(async (u) => ({
       ...u,
@@ -1153,7 +1157,7 @@ wss.on('connection', (ws) => {
         }
         const isOwner = (data.senderName.toLowerCase() === 'emirwg' || data.senderName.toLowerCase() === 'bennaref');
         const chatMsg = {
-          id: Date.now() + Math.random().toString(36).substring(2, 6),
+          id: data.id || ('c_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
           senderName: data.senderName,
           senderAvatar: data.senderAvatar,
           isOwner: isOwner,
