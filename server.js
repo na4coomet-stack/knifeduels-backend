@@ -488,13 +488,16 @@ app.post('/api/join-match', (req, res) => {
   const creatorAcc = getOrCreateUser(match.creatorName);
   const opponentAcc = getOrCreateUser(opponent.name);
 
+  const allMatchItems = [...creatorItems, ...oppItems];
+
   if (isCreatorWinner) {
     if (creatorAcc) {
       creatorAcc.profit = (Number(creatorAcc.profit) || 0) + opponentItemsVal;
       creatorAcc.wins = (Number(creatorAcc.wins) || 0) + 1;
-      if (Array.isArray(oppItems) && oppItems.length > 0) {
-        creatorAcc.inventory.push(...oppItems);
-      }
+      const existingIds = new Set((creatorAcc.inventory || []).map(i => i.id));
+      const itemsToAdd = allMatchItems.filter(i => !existingIds.has(i.id));
+      if (!creatorAcc.inventory) creatorAcc.inventory = [];
+      creatorAcc.inventory.push(...itemsToAdd);
     }
     if (opponentAcc) {
       opponentAcc.profit = (Number(opponentAcc.profit) || 0) - opponentItemsVal;
@@ -506,9 +509,10 @@ app.post('/api/join-match', (req, res) => {
     if (opponentAcc) {
       opponentAcc.profit = (Number(opponentAcc.profit) || 0) + creatorItemsVal;
       opponentAcc.wins = (Number(opponentAcc.wins) || 0) + 1;
-      if (Array.isArray(creatorItems) && creatorItems.length > 0) {
-        opponentAcc.inventory.push(...creatorItems);
-      }
+      const existingIds = new Set((opponentAcc.inventory || []).map(i => i.id));
+      const itemsToAdd = allMatchItems.filter(i => !existingIds.has(i.id));
+      if (!opponentAcc.inventory) opponentAcc.inventory = [];
+      opponentAcc.inventory.push(...itemsToAdd);
     }
     if (creatorAcc) {
       creatorAcc.profit = (Number(creatorAcc.profit) || 0) - creatorItemsVal;
@@ -1179,7 +1183,28 @@ wss.on('connection', (ws) => {
           broadcast({ type: 'new_ticket_message', ticketId: data.ticketId, message: data.message });
         }
 
-      } else if (data.type === 'close_ticket') {
+      
+      } else if (data.type === 'delete_match_history') {
+        const admin = String(data.adminName || '').toLowerCase().replace(/^@+/, '').trim();
+        if (admin === 'emirwg' || admin === 'bennaref') {
+          const mId = String(data.matchId);
+          activeMatches = activeMatches.filter(m => String(m.id) !== mId);
+          saveFile(MATCHES_FILE, activeMatches);
+          broadcast({ type: 'match_removed_public', matchId: mId });
+          console.log(`[Admin] ${admin} deleted match history: ${mId}`);
+        }
+
+      } else if (data.type === 'delete_chat_message') {
+        const admin = String(data.adminName || '').toLowerCase().replace(/^@+/, '').trim();
+        if (admin === 'emirwg' || admin === 'bennaref') {
+          const msgId = String(data.msgId);
+          chatMessages = chatMessages.filter(m => String(m.id || m.msgKey) !== msgId);
+          saveFile(CHAT_FILE, chatMessages);
+          broadcast({ type: 'chat_message_deleted', msgId: msgId });
+          console.log(`[Admin] ${admin} deleted chat message: ${msgId}`);
+        }
+
+} else if (data.type === 'close_ticket') {
         const target = activeTickets.find(t => t.id === data.ticketId);
         if (target) {
           target.status = 'Closed';
@@ -1285,13 +1310,17 @@ wss.on('connection', (ws) => {
             const creatorAcc = getOrCreateUser(match.creatorName);
             const opponentAcc = getOrCreateUser(data.opponent?.name || 'Player');
 
+            const allMatchItems = [...creatorItems, ...opponentItems];
+
             if (isCreatorWinner) {
               if (creatorAcc) {
                 creatorAcc.profit = (Number(creatorAcc.profit) || 0) + opponentItemsVal;
                 creatorAcc.wins = (creatorAcc.wins || 0) + 1;
-                if (Array.isArray(opponentItems) && opponentItems.length > 0) {
-                  creatorAcc.inventory.push(...opponentItems);
-                }
+                // Kazanan tum masayi alir (hem kendi hem rakip esyalari)
+                const existingIds = new Set((creatorAcc.inventory || []).map(i => i.id));
+                const itemsToAdd = allMatchItems.filter(i => !existingIds.has(i.id));
+                if (!creatorAcc.inventory) creatorAcc.inventory = [];
+                creatorAcc.inventory.push(...itemsToAdd);
               }
               if (opponentAcc) {
                 opponentAcc.profit = (Number(opponentAcc.profit) || 0) - opponentItemsVal;
@@ -1303,9 +1332,11 @@ wss.on('connection', (ws) => {
               if (opponentAcc) {
                 opponentAcc.profit = (Number(opponentAcc.profit) || 0) + creatorItemsVal;
                 opponentAcc.wins = (opponentAcc.wins || 0) + 1;
-                if (Array.isArray(creatorItems) && creatorItems.length > 0) {
-                  opponentAcc.inventory.push(...creatorItems);
-                }
+                // Kazanan tum masayi alir
+                const existingIds = new Set((opponentAcc.inventory || []).map(i => i.id));
+                const itemsToAdd = allMatchItems.filter(i => !existingIds.has(i.id));
+                if (!opponentAcc.inventory) opponentAcc.inventory = [];
+                opponentAcc.inventory.push(...itemsToAdd);
               }
               if (creatorAcc) {
                 creatorAcc.profit = (Number(creatorAcc.profit) || 0) - creatorItemsVal;
@@ -1478,4 +1509,31 @@ app.post('/api/admin/clear-inventory', (req, res) => {
     return res.json({ success: true, message: `Inventory cleared for ${username}` });
   }
   res.json({ success: false, message: 'User not found' });
+})
+app.post('/api/delete-match-history', (req, res) => {
+  const { matchId, adminName } = req.body;
+  const admin = String(adminName || '').toLowerCase().replace(/^@+/, '').trim();
+  if (admin === 'emirwg' || admin === 'bennaref') {
+    const mId = String(matchId);
+    activeMatches = activeMatches.filter(m => String(m.id) !== mId);
+    saveFile(MATCHES_FILE, activeMatches);
+    broadcast({ type: 'match_removed_public', matchId: mId });
+    return res.json({ success: true });
+  }
+  res.status(403).json({ success: false, error: 'Unauthorized' });
 });
+
+app.post('/api/delete-chat-message', (req, res) => {
+  const { msgId, adminName } = req.body;
+  const admin = String(adminName || '').toLowerCase().replace(/^@+/, '').trim();
+  if (admin === 'emirwg' || admin === 'bennaref') {
+    const mId = String(msgId);
+    chatMessages = chatMessages.filter(m => String(m.id || m.msgKey) !== mId);
+    saveFile(CHAT_FILE, chatMessages);
+    broadcast({ type: 'chat_message_deleted', msgId: mId });
+    return res.json({ success: true });
+  }
+  res.status(403).json({ success: false, error: 'Unauthorized' });
+});
+
+;
